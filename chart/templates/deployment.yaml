@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "jspolicy.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "jspolicy.fullname" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "jspolicy.fullname" . }}
+      release: {{ .Release.Name }}
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "jspolicy.fullname" . }}
+        release: {{ .Release.Name }}
+    spec:
+      terminationGracePeriodSeconds: 10
+      serviceAccountName: {{ template "jspolicy.serviceAccountName" . }}
+      containers:
+      - ports:
+        - name: webhook
+          containerPort: 443
+          protocol: TCP
+        command:
+        {{- range $f := .Values.jspolicy.command }}
+        - {{ $f | quote }}
+        {{- end }}
+        args:
+        {{- range $f := .Values.jspolicy.args }}
+        - {{ $f | quote }}
+        {{- end }}
+        {{- if .Values.image }}
+        image: "{{ .Values.image }}"
+        {{- else }}
+        image: "loftsh/jspolicy:{{ .Chart.Version }}"
+        {{- end }}
+        name: jspolicy
+        env:
+          {{- range $key, $value := .Values.env }}
+          - name: {{ $key | quote }}
+            value: {{ $value | quote }}
+          {{- end }}
+        {{- if .Values.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          failureThreshold: 10
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        {{- end }}
+        {{- if .Values.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          failureThreshold: 10
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        {{- end }}
+        resources:
+{{ toYaml .Values.jspolicy.resources | indent 10 }}

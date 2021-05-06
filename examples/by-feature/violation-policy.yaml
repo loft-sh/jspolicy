@@ -1,0 +1,18 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "violation-policy.resource.example"
+spec:
+  # With violationPolicy you can specify what should happen if deny() is called.
+  # By default, this will be Deny, which denies the request. You can also specify
+  # Warn, which will print a warning instead to the client and log the denied request
+  # or you can specify Dry which will allow the request, but also log it to the 
+  # JsPolicyViolations resource
+  violationPolicy: Warn
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    if (request.namespace === "default") {
+      // Check the audit logs via `kubectl get jspolicyviolations violation-policy.resource.example -o yaml`
+      deny("Do not create pods in the default namespace");
+    }

@@ -1,0 +1,32 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "get.resource.example"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    // get() is able to retrieve any resource from the kubernetes cluster either cached or directly
+    // get() takes parameters in the form of (Kind, apiVersion, Name, GetOptions?)
+    
+    // will also work with other CRDs, if the object cannot be found 'undefined' is returned.
+    const pod = get("Pod", "v1", "my-namespace/my-pod");
+    if (!pod) {
+      print("Pod not found");
+    } else {
+      print("Pod found");
+    }
+
+    // this will try to find the namespace first in the cache (fast) and if not found will
+    // try to find it without cache (slow). Usually trying to get the resource from the cache
+    // is enough, but there might be cases where some requests are faster than cache updates. 
+    const namespace = get("Namespace", "v1", request.namespace, {cache: 'smart'});
+    if (!namespace) {
+      warn("Namespace not found");
+    } 
+        
+    // you can also force cache behaviour by setting the 'cache' option to 'true' or 'false'
+    const ingress = get("Ingress", "networking.k8s.io/v1", "my-namespace/my-config-map", {cache: false}) 
+    if (ingress) {
+      print("Found ingress");
+    }

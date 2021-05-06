@@ -1,0 +1,17 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "pod-sleep.example.com"
+spec:
+  operations:  ["CREATE"]
+  resources:   ["pods"]
+  javascript: |
+    // you should usually never(!) sleep inside a webhook,
+    // however there might be situations where you need to wait for
+    // something to happen in the cluster, so this function exists
+    //
+    // remember you can use {cache: false} as well for get() and list()
+    // if you need timing critical webhooks
+    const before = new Date().getTime();
+    sleep(1000); // sleep for 1 second
+    print(`Slept for ${(new Date().getTime() - before)}`);

@@ -1,0 +1,15 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "object-selector.resource.example"
+spec:
+  # This works exactly as a object selector on a ValidatingWebhookConfiguration
+  # You can either use matchLabels or matchExpressions. For more information take
+  # a look at https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector
+  objectSelector:
+    matchLabels:
+      test: test
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    deny("no pods are allowed with these labels");

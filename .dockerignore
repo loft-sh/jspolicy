@@ -1,0 +1,9 @@
+.vscode/
+.devspace/
+chart/
+hack/
+devspace.yaml
+/.git
+/docs
+/test
+/examples

@@ -1,0 +1,19 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "scope.resource.example"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  # This tells jspolicy that you want to create a namespaced webhook
+  # that only applies to namespaced resources. Valid options are
+  # Namespaced, Cluster or *. Defaults to *
+  scope: Namespaced
+  # You can specify specific api versions this policy should apply to.
+  # This defaults to ["*"] if not defined.
+  apiVersions: ["v1"]
+  # You can specify specifc api groups this policy should apply to.
+  # This defaults to ["*"] if not defined.
+  apiGroups: ["*"]
+  javascript: |
+    warn("Hello World!");

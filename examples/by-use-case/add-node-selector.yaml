@@ -1,0 +1,24 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "add-node-selector.example.com"
+spec:
+  type: Mutating
+  operations: ["CREATE"]
+  resources: ["pods"]
+  namespaceSelector:
+    matchLabels:
+      with-node-selector: "true"
+  javascript: |
+    // This policy enforces a node selector for pods
+    // that are created in namespaces with the
+    // label with-node-selector: 'true'
+  
+    // set the new label selector
+    request.object.spec.nodeSelector = {
+      "foo": "value",
+      "test": "test2"
+    }
+
+    // automatically calculate patch and exit
+    mutate(request.object);

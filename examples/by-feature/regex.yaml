@@ -1,0 +1,15 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "pod-policy.example.com"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  apiVersions: ["*"]
+  apiGroups: ["*"]
+  javascript: |
+    // all javascript regexes work here
+    const re = /^ubuntu$/;
+    if (request.object.metadata.name.match(re)) {
+      deny("name ubuntu not allowed");
+    }

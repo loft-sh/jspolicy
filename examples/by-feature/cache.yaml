@@ -1,0 +1,32 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "cache.resource.example"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    // if you call get() or list() within a policy, jspolicy will by default try to get 
+    // the resources from its internal cache to save time and ease pressure on the api server.
+    // You do not need to configure which resources are cached by jspolicy as it will figure this 
+    // out automatically by tracking which resources are called in get() and list().
+    // 
+    // You can explicitly tell jspolicy to make a direct call to the api server instead
+    // of retrieving the resources from the cache via the get or list options. jspolicy
+    // also supports 'smart' caching for get(), where it tries to find a resource in the
+    // cache first and if not found will try to retrieve it from the api server.
+    
+    // get a deployment from cache. If not cached yet, jspolicy will build a cache for
+    // this resource with the first get() or list() call to "Deployment" and "apps/v1".
+    get("Deployment", "apps/v1", "my-namespace/my-deployment");
+    
+    // get or list a resource directly from kubernetes and do not build a cache or try to retrieve
+    // it from cache
+    get("MyCustomKind", "my.custom.group/v1beta1", "my-name", {cache: false});
+    list("MyCustomKind", "my.custom.group/v1beta1", {cache: false});
+    
+    // retrieve a resource via 'smart' caching, where jspolicy will try cache first and then
+    // uses a direct request if not found. Only works for get() obviously
+    get("Namespace", "v1", "my-namespace", {cache: 'smart'});
+    
+    

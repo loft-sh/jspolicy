@@ -1,0 +1,17 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "deny-certain-ingress-classes.example.com"
+spec:
+  operations: ["CREATE", "UPDATE"]
+  resources: ["ingresses"]
+  javascript: |
+    // ingress class can be set via annotation "kubernetes.io/ingress.class" or through spec.ingressClassName.
+    const allowedIngressClasses = ["nginx"];
+    const ingressClasses = [request.object.metadata?.annotations?.["kubernetes.io/ingress.class"], request.object.spec.ingressClassName];
+    const notAllowed = ingressClasses.filter(ingressClass => ingressClass && !allowedIngressClasses.includes(ingressClass));
+    if (notAllowed.length > 0) {
+      deny(`ingress class ${notAllowed[0]} is not allowed`);
+    }
+    
+    

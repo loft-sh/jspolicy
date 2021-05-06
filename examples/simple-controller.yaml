@@ -1,0 +1,67 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "simple-controller.resource.example"
+spec:
+  operations: ["CREATE"]
+  resources: ["namespaces"]
+  apiGroups: [""]
+  # If type is Controller, the policy will behave like a regular
+  # Kubernetes controller and the policy logic will be called in each
+  # reconcile. A controller will receive watch events from 
+  # Kubernetes directly and can act on those. This makes it possible 
+  # to change cluster state based on cluster changes immediately or to enforce 
+  # policies on objects that already exist. JsPolicy makes sure that at all times only
+  # one instance of this policy is running, so you don't have to fear
+  # race conditions. Find out more about controllers in Kubernetes at 
+  # https://kubernetes.io/docs/concepts/architecture/controller/
+  #
+  # You can use deny() to report violations, requeue() if you encounter errors 
+  # or change the cluster state via the create(), update() and remove() functions directly. 
+  # Note that a change to a resource that is watched by this policy will immediately 
+  # trigger a reconcile on this policy.
+  # 
+  # Each controller policy will initially receive a CREATE event
+  # for each resource that already exists. On each change to a specified
+  # resource the policy will receive either a CREATE event (for changed
+  # or newly created objects) or a DELETE event for deleted objects.
+  # In addition, when the underlying resource informer is re-synced,
+  # CREATE events will be emitted again for all existing resources. 
+  type: Controller
+  # You can also use objectSelector and namespaceSelector for controller policies
+  # This controller will only reconcile namespaces that have a "add-configmap": "true"
+  # label.
+  objectSelector:
+    matchLabels:
+      add-configmap: "true"
+  javascript: | 
+    // This policy will create a simple configmap for each namespace that has the label "add-configmap"
+    //
+    // You can test the policy with:
+    // kubectl create ns test
+    // kubectl label ns test add-configmap=true
+    // kubectl get configmaps -n test
+
+    // check if there is a configmap already 
+    const configMap = get("ConfigMap", "v1", request.name+"/my-config-map");
+    if (!configMap) {
+      // create the config map if we couldn't find it in the namespace
+      const createResult = create({
+        kind: "ConfigMap",
+        apiVersion: "v1",
+        metadata: {
+          "name": "my-config-map",
+          "namespace": request.name,
+        },
+        data: {
+          "my-data": `Hello World, I was created in ${request.name}`
+        }
+      });
+      if (!createResult.ok && createResult.reason !== "AlreadyExists") {
+        // some unexpected error occurred here, so we reconcile and log
+        // the error to the jsPolicy log
+        requeue(createResult.message);
+      } else if (createResult.object) {
+        print(`created ConfigMap`, createResult.object);
+      }
+    }

@@ -1,0 +1,29 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "update.resource.example"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    // update() is able to update any resource in the kubernetes cluster
+    // update() takes parameters in the form of (newObject)
+
+    // this will update the namespace and set the amount of pods in the namespace annotations
+    const namespace = get("Namespace", "v1", request.namespace);
+    const pods = list("Pod", "v1", {namespace: request.namespace});
+    
+    // set annotation
+    namespace.metadata.annotations = {...namespace.metadata.annotations, "pods-count": `${pods.length + 1}`};
+    
+    const result = update(namespace);
+    if (!result.ok) {
+      // check for a specific error type
+      if (result.reason === "Conflict") {
+        warn(`Change conflicted with another change to the namespace`);
+      } else {
+        warn(`Error updating Namespace (Reason ${result.reason}): ${result.message}`);
+      }
+    } else {
+      print("Updated Namespace", result.object);
+    }

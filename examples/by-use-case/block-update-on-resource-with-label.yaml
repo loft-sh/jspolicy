@@ -1,0 +1,16 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "block-update-on-resource-with-label.example.com"
+spec:
+  operations: ["UPDATE", "DELETE"]
+  resources: ["*"]
+  scope: Namespaced
+  objectSelector:
+    matchLabels:
+      protected: "true"
+  javascript: |
+    // This policy blocks updates and deletes on resources that have the label "protected": "true"
+    deny(`cannot ${request.operation} protected ${request.kind.kind} ${request.name}`);
+    
+    

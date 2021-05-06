@@ -1,0 +1,19 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "copy-namespace-annotations.example.com"
+spec:
+  # When a policy type is Mutating, jsPolicy will create a mutating
+  # admission webhook for this policy. Other types are Validating and Controller
+  type: Mutating
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    // this webhook will copy the namespace annotations and set them to the pod
+    const namespace = get("Namespace", "v1", request.namespace);
+    
+    // copy annotations
+    request.object.metadata.annotations = namespace?.metadata?.annotations;
+
+    // automatically calculate patch and exit
+    mutate(request.object);

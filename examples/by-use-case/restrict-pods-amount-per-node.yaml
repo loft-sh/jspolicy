@@ -1,0 +1,23 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "restrict-pods-amount-per-node.example.com"
+spec:
+  operations: ["CREATE", "UPDATE"]
+  resources: ["pods"]
+  javascript: |
+    // allow creation if no node name is specified yet
+    if (!request.object.spec.nodeName) {
+      allow();
+    } 
+    
+    // allow if node name has not changed on UPDATE
+    if (request.oldObject?.spec.nodeName === request.object.spec.nodeName) {
+      allow();
+    }
+    
+    // check how many pods are already on the node we want to schedule 
+    const podsOnNode = list("Pod", "v1").filter(pod => pod.spec.nodeName === request.object.spec.nodeName).length
+    if (podsOnNode + 1 > 5) {
+      deny(`Only up to 5 pods are allowed on node ${request.object.spec.nodeName}`);
+    }

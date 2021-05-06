@@ -1,0 +1,23 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "unique-ingress-host.example.com"
+spec:
+  operations: ["CREATE", "UPDATE"]
+  resources: ["ingresses"]
+  javascript: |
+    // iterate over all ingresses in cluster and check for same hosts
+    list("Ingress", "networking.k8s.io/v1").forEach(ingress => {
+      // don't check self on UPDATE
+      if (ingress.metadata.name === request.name && ingress.metadata.namespace === request.namespace) {
+        return;
+      }
+    
+      ingress.spec.rules?.forEach(rule => {
+        request.object.spec.rules?.forEach(objRule => {
+          if (rule.host === objRule.host) {
+            deny(`ingress ${ingress.metadata.namespace}/${ingress.metadata.name} already uses host ${rule.host}`);
+          }
+        })
+      })
+    })

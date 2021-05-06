@@ -1,0 +1,23 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "set-annotation.example.com"
+spec:
+  type: Mutating
+  operations: ["CREATE", "UPDATE"]
+  resources: ["pods"]
+  javascript: |
+    // if type is Mutating in a jspolicy, you can call mutate(changedObject) to change the incoming object.
+    // jspolicy will calculate a corresponding patch automatically with differences to the initial request.object.
+    // If you call mutate() with an object that has not changed at all, jspolicy will do nothing, so you do not have
+    // to remember if you have changed the object. You can also call deny() or allow() in a mutating policy without  
+    // changing the object to allow or deny the request. 
+    if (request.object.metadata.annotations?.["required-annotation"] !== "is-required") {
+      // set annotation required-annotation=is-required
+      request.object.metadata.annotations = {...request.object.metadata.annotations, 'required-annotation': 'is-required'};
+          
+      // tell jspolicy to calc the patch and exit
+      mutate(request.object);
+    }
+
+    // if execution reaches here, request is allowed and nothing happens

@@ -1,0 +1,28 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "unique-pod-labels.example.com"
+spec:
+  operations: ["CREATE", "UPDATE"]
+  resources: ["pods"]
+  # Same syntax here as in a package.json
+  # You can specify any commonjs npm package here
+  # jsPolicy will run npm install for these and
+  # bundle the complete policy with webpack
+  dependencies:
+    lodash: "^4.17.21"
+  javascript: |
+    import _ from 'lodash';
+        
+    // iterate over other pods in namespace and check labels
+    list("Pod", "v1", {namespace: request.namespace}).forEach(pod => {
+      // don't check self on UPDATE
+      if (pod.metadata.name === request.object.metadata.name) {
+        return;
+      }
+        
+      // are labels equal?
+      if (_.isEqual(pod.metadata?.labels, request.object.metadata?.labels)) {
+        deny(`pod ${pod.metadata.name} has the same labels as pod ${request.object.metadata.name}`);
+      } 
+    })

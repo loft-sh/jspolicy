@@ -1,0 +1,30 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "list.resource.example"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    // list() can list any resource in the kubernetes cluster either from cache or directly
+    // list() takes parameters in the form (Kind, apiVersion, ListOptions?) and returns an array
+    
+    // ListOptions can be 'namespace', 'labelSelector' and 'cache' 
+    // If no ListOptions are specified all resources from the cluster are listed
+    const pods = list("Pod", "v1", {
+      namespace: request.namespace
+    })
+    if (pods.length >= 10) {
+      deny("No more pods allowed in namespace " + request.namespace);
+    }
+        
+    // list all pods in cluster with label selector from cache
+    const myLabelPods = list("Pod", "v1", {
+      labelSelector: "my-label=my-value"
+    })
+    if (myLabelPods.length > 0) {
+      print("Found pod with my-label=my-value");
+    }
+        
+    // deny if there is an ubuntu pod in the namespace
+    pods.forEach(pod => pod.metadata.name === "ubuntu" && deny("there is an ubuntu pod in the namespace"));

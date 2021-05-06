@@ -1,0 +1,25 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "fetch.example.com"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    // use fetchSync to make requests to backend servers
+    const res = fetchSync("https://ip.seeip.org/jsonip", {
+      method: "GET",
+      headers: {
+        "X-Custom-HTTP-Header": "test"
+      },
+    });
+    if (res.ok) {
+      print("jspolicy ip: " + res.json().ip);
+    }
+
+    // you can also use try catch to handle network errors
+    try {
+      fetchSync("https://this.will.not.exist.tld");
+    } catch(err) {
+      print("Catched fetchSync: " + err);
+    }

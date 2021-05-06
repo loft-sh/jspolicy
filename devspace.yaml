@@ -1,0 +1,82 @@
+version: v1beta9
+images:
+  controller:
+    image: loftsh/jspolicy
+    build:
+      docker:
+        skipPush: true
+        options:
+          target: builder
+deployments:
+  - name: jspolicy
+    helm:
+      chart:
+        name: ./chart
+      values:
+        image: loftsh/jspolicy
+        jspolicy:
+          command: ["/workspace/jspolicy"]
+commands:
+  - name: dev
+    command: "devspace dev -n jspolicy -d --profile dev"
+  - name: deploy
+    command: "devspace deploy -n jspolicy -d --profile deploy"  
+profiles:
+  - name: deploy
+    replace:
+      images:
+        controller:
+          image: loftsh/jspolicy
+      deployments:
+        - name: jspolicy
+          helm:
+            chart:
+              name: ./chart
+            values:
+              image: loftsh/jspolicy
+              env: 
+                ALLOW_FETCH: "true"
+                ALLOW_READ_FILE: "true"
+                ALLOW_ENV: "true"
+  - name: dev
+    patches:
+      - op: replace
+        path: deployments[0].helm.values.jspolicy.command
+        value: ["sleep"]
+      - op: add
+        path: deployments[0].helm.values.jspolicy.args
+        value: ["99999999999"]
+      - op: add
+        path: deployments[0].helm.values.readinessProbe
+        value:
+          enabled: false
+      - op: add
+        path: deployments[0].helm.values.livenessProbe
+        value:
+          enabled: false
+      - op: add
+        path: deployments[0].helm.values.jspolicy.resources
+        value:
+          limits:
+            memory: 100Gi
+            cpu: "1000"
+    replace:
+      dev:
+        interactive:
+          defaultEnabled: true
+          terminal:
+            imageName: controller
+        sync:
+          - imageName: controller
+            waitInitialSync: true
+            excludePaths:
+              - hack/
+              - /gen
+              - /docs
+              - /config
+              - bin/
+              - .vscode/
+              - .git/
+              - examples/
+              - chart/
+              - /helm

@@ -1,0 +1,51 @@
+# Default values for js-policy.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+env: {}
+
+readinessProbe:
+  enabled: true
+
+livenessProbe:
+  enabled: true
+
+jspolicy:
+  command: 
+  - /jspolicy
+  args: []
+  resources:
+    limits:
+      memory: 1024Mi
+      cpu: "2"
+    requests:
+      memory: 128Mi
+      cpu: 50m
+
+serviceAccount:
+  name: serviceaccount
+  create: true
+  clusterRole: cluster-admin
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 443
+  targetPort: 443
+  
+webhook:
+  create: true
+  
+# Prometheus Service Monitor Configuration
+serviceMonitor:
+  enabled: false
+  jobLabel: jspolicy
+  path: /metrics
+  interval: 60s
+  scrapeTimeout: 30s
+  labels: {}
+  

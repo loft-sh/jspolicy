@@ -1,0 +1,19 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "deny-specific-container-image.example.com"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    const notAllowedImages = [/^busybox:?.*/, /^ubuntu:?.*/]
+    const containers = request.object.spec.containers || [];
+    const initContainers = request.object.spec.initContainers || [];
+
+    [...containers, ...initContainers].forEach(container => {
+      notAllowedImages.forEach(regEx => {
+        if (container.image.match(regEx)) {
+          deny(`container image ${container.image} is not allowed`);
+        }
+      });
+    })

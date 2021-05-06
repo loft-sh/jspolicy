@@ -1,0 +1,16 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "deny-privilege-escalation.example.com"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    const containers = request.object.spec.containers || [];
+    const initContainers = request.object.spec.initContainers || [];
+    
+    [...containers, ...initContainers].forEach(container => {
+      if (container.securityContext?.allowPrivilegeEscalation) {
+        deny("spec.containers[*].securityContext.allowPrivilegeEscalation and spec.initContainers[*].securityContext.allowPrivilegeEscalation are not allowed")
+      }
+    })

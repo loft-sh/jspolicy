@@ -1,0 +1,16 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "print.resource.example"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    // print() can be used to print javascript objects to the jspolicy log
+    // it will prefix the statements with a timestamp and [POLICY_NAME]
+
+    print("Hello World!", 1, 2, 3); // -> will print [print.resource.example]: Hello World! 1 2 3
+    
+    print("My object", {"test": "test"}); // -> will print [print.resource.example]: My object {"test": "test"}
+    
+    print(get("Namespace", "v1", request.namespace)); // -> will print [print.resource.example]: {"kind": "Namespace"...

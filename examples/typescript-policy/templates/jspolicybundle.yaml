@@ -1,0 +1,6 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicyBundle
+metadata:
+  name: "pod-deny-privileged.example.com"
+spec:
+  bundle: ##BUNDLE##

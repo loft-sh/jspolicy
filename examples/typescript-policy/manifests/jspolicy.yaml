@@ -1,0 +1,7 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "pod-deny-privileged.example.com"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]

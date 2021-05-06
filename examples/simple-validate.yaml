@@ -1,0 +1,18 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "pod-policy.example.com"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    // print will print a message to jsPolicies pod log
+    print("Incoming request for: " + request.object.metadata?.name)
+
+    // validate that the pod does not have an annotation called "forbidden-annotation"
+    if (request.object.metadata?.annotations?.["forbidden-annotation"]) {
+      // deny the request with the following message. deny() will end execution of the script as well
+      deny("forbidden-annotation is not allowed"); 
+    }
+
+    // if no deny() or allow() is called, request is allowed

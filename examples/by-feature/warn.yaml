@@ -1,0 +1,20 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "warn.example.com"
+spec:
+  operations: ["CREATE", "UPDATE"]
+  resources: ["configmaps"]
+  javascript: |
+    // warn() will print a warning to the client. If warn() is called multiple times, it will print multiple warnings
+    // Warnings are a feature of kubernetes since v1.19 and could look like this:
+    //
+    // kubectl create -f my-configmap.yaml
+    // Warning: [warn.example.com]: Hello This Is A Warning for ConfigMap default/my-configmap
+    // Warning: [warn.example.com]: Hello This Is Another Warning
+    // configmap "my-configmap" created
+    //
+    warn(`Hello This Is A Warning for ConfigMap ${request.object.metadata.namespace}/${request.object.metadata.name}`);
+    
+    // print another warning to the client
+    warn("Hello This Is Another Warning");

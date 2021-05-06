@@ -1,0 +1,23 @@
+{
+    "name": "ts-example-policy",
+    "version": "0.1.0",
+    "description": "A simple project that shows how to use typescript with jspolicy",
+    "main": "lib/src/index.js",
+    "repository": "github.com/jspolicy/examples/typescript",
+    "author": "Loft Labs Inc.",
+    "license": "MIT",
+    "devDependencies": {
+        "@jspolicy/types": "^0.0.4",
+        "@kubernetes/client-node": "^0.14.3",
+        "@types/jest": "^26.0.23",
+        "jest": "^26.0.23",
+        "ts-jest": "^26.0.23",
+        "typescript": "^4.2.4",
+        "webpack": "^5.36.1",
+        "webpack-cli": "^4.6.0"
+    },
+    "scripts": {
+        "compile": "tsc && webpack --config webpack.config.js && node ./scripts/manifests.js",
+        "test": "jest --env=node --colors --coverage test"
+    }
+}

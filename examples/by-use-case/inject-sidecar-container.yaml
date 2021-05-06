@@ -1,0 +1,24 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "inject-sidecar-container.example.com"
+spec:
+  type: Mutating
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    // if the annotation inject-side-car: 'true' is set on the pod we inject a sidecar
+    if (request.object.metadata?.annotations?.["inject-side-car"] === "true") {
+      if (!request.object.spec.containers) {
+        request.object.spec.containers = [];
+      }
+    
+      // add sidecar
+      request.object.spec.containers.push({
+        name: "injected-container",
+        image: "busybox",
+        command: ["sleep", "3600"]
+      });
+    
+      mutate(request.object);
+    }

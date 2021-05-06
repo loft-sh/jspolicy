@@ -1,0 +1,20 @@
+# This Policy denies privileged pods. 
+#
+# It has no spec.javascript field, which means jsPolicy will not bundle the policy itself and expects
+# you to provide a JsPolicyBundle resource.
+#
+# For this example the bundle is in the file examples/by-feature/precompiled.bundle.yaml, 
+# which just holds a minified javascript that is gzipped and base64 encoded to save space. 
+# 
+# This allows you to build your policies yourself with webpack and as a regular javascript or typescript project.
+# For a complete example how to compile your policy yourself, take a look at the examples/typescript-policy
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "pod-deny-privileged.example.com"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  # No javascript field here as we have a corresponding JsPolicyBundle
+  # that holds the minified and gzipped js code. The bundle was generated
+  # via the examples/typescript-policy example

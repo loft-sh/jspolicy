@@ -1,0 +1,15 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "timeout.resource.example"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  # This specifies after which time the javascript execution should
+  # be terminated and an error should be returned to kubernetes.
+  # Defaults to 10 seconds.
+  timeoutSeconds: 4
+  javascript: |
+    while(true) {
+      // evil endless loop
+    }

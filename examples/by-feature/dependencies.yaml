@@ -1,0 +1,25 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "dependency-policy.example.com"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  # Same syntax here as in a package.json
+  # All commonjs packages in the npm registry are supported
+  #
+  # Internally, jsPolicy will run npm install for these and
+  # bundle & minify the complete policy with webpack
+  # 
+  # To pull packages from a private npm registry
+  # you will need to override the ~/.npmrc of the
+  # jspolicy container.
+  dependencies:
+    lodash: "^4.17.21"
+  javascript: |
+    import _ from 'lodash';
+
+    // check if forbidden label set is used
+    if (_.isEqual(request.object.metadata?.labels, {"my-forbidden-label": "my-forbbiden-value"})) {
+      deny("forbidden label set encountered"); // ends execution here
+    }

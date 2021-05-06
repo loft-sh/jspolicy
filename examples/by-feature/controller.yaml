@@ -1,0 +1,67 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "state.resource.example"
+spec:
+  operations: ["CREATE"]
+  resources: ["namespaces"]
+  apiGroups: [""]
+  # If type is Controller, the policy will behave like a regular
+  # Kubernetes controller and the policy logic will be called in each
+  # reconcile. A controller will receive watch events from 
+  # Kubernetes directly and can act on those. This makes it possible 
+  # to change cluster state based on cluster changes immediately or to enforce 
+  # policies on objects that already exist. JsPolicy makes sure that at all times only
+  # one instance of this policy is running, so you don't have to fear
+  # race conditions. Find out more about controller at 
+  # https://kubernetes.io/docs/concepts/architecture/controller/
+  #
+  # You can use deny() to report violations or change the cluster state 
+  # via the create(), update() and remove() functions directly. Note that 
+  # a change to a resource that is watched by this policy will immediately 
+  # trigger a reconcile on this policy.
+  # 
+  # Each controller policy will initially receive a CREATE event
+  # for each resource that already exists. On each change to a specified
+  # resource the policy will receive either a CREATE event (for changed
+  # or newly created objects) or a DELETE event for deleted objects.
+  # In addition, when the underlying resource informer is re-synced,
+  # CREATE events will be emitted again for all existing resources. 
+  type: Controller
+  # You can also use objectSelector and namespaceSelector for controller policies
+  objectSelector:
+    matchLabels:
+      create-rq: "true"
+  javascript: |
+    // This policy will create a resource quota for each namespace that 
+    // has a label "create-rq": "true". Also works for already existing
+    // namespaces that match these labels.
+    //
+    // You can test the policy with:
+    // kubectl create ns test
+    // kubectl label ns test create-rq=true
+    // kubectl get resourcequotas -n test
+    
+    // find resource quota
+    const resourceQuota = get("ResourceQuota", "v1", request.name + "/my-resource-quota");
+    if (!resourceQuota) {
+      const createResult = create({
+        kind: "ResourceQuota",
+        apiVersion: "v1",
+        metadata: {
+          "name": "my-resource-quota",
+          "namespace": request.name
+        },
+        spec: {
+          hard: {
+            "limits.cpu": "2"
+          }
+        }
+      });
+      if (!createResult.ok && createResult.reason !== "AlreadyExists") {
+        requeue(createResult.message);
+      } else {
+        print(`created ResourceQuota ${request.name}/my-resource-quota`);
+      }
+    }
+    

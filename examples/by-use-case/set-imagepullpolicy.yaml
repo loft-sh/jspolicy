@@ -1,0 +1,19 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "set-imagepullpolicy.example.com"
+spec:
+  type: Mutating
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    // if tag is latest or no tag specified, we set imagePullPolicy to "Always"
+    
+    request.object.spec.containers?.forEach(container => {
+      if (container.image.match(/^[^:]+(:latest)?$/)) {
+        container.imagePullPolicy = "Always";
+      }
+    });
+    
+    // if changed we tell jspolicy to mutate it
+    mutate(request.object);
