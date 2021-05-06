@@ -3,8 +3,8 @@
 
 ### **[Website](https://www.jspolicy.com)** • **[Getting Started Guide](https://www.jspolicy.com/docs/getting-started/installation)** • **[Documentation](https://www.jspolicy.com/docs/why-jspolicy)** • **[Blog](https://loft.sh/blog)** • **[Twitter](https://twitter.com/loft_sh)** • **[Slack](https://slack.loft.sh/)**
 
-![Latest Release](https://img.shields.io/github/v/release/loft-sh/vcluster?style=for-the-badge&label=Latest%20Release&color=%23007ec6)
-![License: Apache-2.0](https://img.shields.io/github/license/loft-sh/vcluster?style=for-the-badge&color=%23007ec6)
+![Latest Release](https://img.shields.io/github/v/release/loft-sh/jspolicy?style=for-the-badge&label=Latest%20Release&color=%23007ec6)
+![License: Apache-2.0](https://img.shields.io/github/license/loft-sh/jspolicy?style=for-the-badge&color=%23007ec6)
 
 
 ### jsPolicy - Easier & Faster Kubernetes Policies using JavaScript or TypeScript
@@ -36,7 +36,7 @@ Learn more on [www.jspolicy.com](https://www.jspolicy.com).
 ![jsPolicy Compatibility](docs/static/media/cluster-compatibility.png)
 
 
-Learn more in the [documentation](https://www.jspolicy.com/docs/why-vcluster).
+Learn more in the [documentation](https://www.jspolicy.com/docs/why-jspolicy).
 
 <br>
 
