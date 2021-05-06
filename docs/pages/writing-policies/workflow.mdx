@@ -1,0 +1,138 @@
+---
+title: Writing Policies & Policy Logic
+sidebar_label: Workflow
+---
+
+Writing policies for jsPolicy generally means that you need to define two things:
+1. [Policy Settings](#configure-policy-settings): `JsPolicy` specifies the type of policy and defines when this policy should apply
+2. [Policy Logic](#write-policy-logic): `JsPolicyBundle` contains the policy logic in the form of base64 encoded, compressed JavaScript code
+
+
+## Configure Policy Settings
+The settings of a policy are store inside the `JsPolicy` custom resource and has three types of options:
+- [Policy Type](#policy-type): `Validating`, `Mutating`, or `Controller`
+- [Policy Trigger](#policy-trigger): defines for which kind of operations and objects the policy should be exectued
+- [Runtime Settings](#runtime-settings): define additional parameters that matter during the execution of the [policy logic](#policy-logic).
+
+### Policy Type
+The type of the policy tells jsPolicy what the policy is supposed to do:
+- [mutate the object/payload of a request](../using-policies/policy-types.mdx#mutating) to the Kubernetes API server (mutating admission control webhook)
+- [validate requests](../using-policies/policy-types.mdx#validating) to the Kubernetes API server (validating admission control webhook)
+- [react to Kubernetes Events](../using-policies/policy-types.mdx#controller) after an object in your cluster has changed (reconciliation function of a Kubernetes controller)
+
+Learn more about the different [Policy Types](../using-policies/policy-types.mdx)
+
+The policy type is defined via `spec.type` and `Validating` is the default value and may be omitted.
+```yaml {6}
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "policy-name.company.tld"
+spec:
+  type: Validating  # other options: Mutating | Controller 
+```
+
+### Policy Trigger
+Since you do **not** want all your policies to be executed every time for all interactions with all the objects in your Kubernetes cluster, you can limit for which objects a particular policy should trigger.
+
+The following options may be configured to specify when a particular policy should be triggered:
+- `operations`: An array of strings containing Kubernetes CRUD operations, i.e. any combination of `CREATE`, `UPDATE`, `DELETE`
+- `resources`: An array of strings stating Kubernetes resources, e.g. `pods`, `deployments`, `services` etc.
+- `scope`: A string stating if the operation is `Namespaced` or `Cluster`-wide (default value: `*` (means `Namespaced` || `Cluster`))
+- `namespaceSelector`: A [Kubernetes namespace selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-namespaceselector) which defines that a policy should only trigger for operations in namespaces with specific attributes (e.g. only namespaces with certain labels)
+- `objectSelector`: A [Kubernetes object selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector) which defines that a policy should only trigger for objects with specific attributes (e.g. only objects with certain labels)
+- `matchPolicy`: A string stating the [Kubernetes match policy](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-matchpolicy) which tells Kubernetes how fuzzy the `objectSelector` shall be applied (either `Exact` or `Equivalent`(default))
+- `apiGroups`: An array of strings stating [Kubernetes API groups](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-rules) (default: `*` matching any API group)
+- `apiVersions`: An array of strings stating [Kubernetes API versions](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-rules) (default: `*` matching any API version)
+
+```yaml {7-20}
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "mutate-images.company.tld"
+spec:
+  type: Mutating
+  operations: ["CREATE", "UPDATE"]
+  resources: ["pods", "deployments"]
+  scope: Namespaced
+  namespaceSelector:
+    matchExpressions:               # only trigger for namespaces with label "environment: prod" and/or label "environment: staging"
+    - key: environment
+      operator: In
+      values: ["prod","staging"]
+  objectSelector:                   # all trigger for objects with label "live: true"
+    matchLabels:
+      live: "true"
+  matchPolicy: "Equivalent"
+  apiGroups: ["*"]
+  apiVersions: ["*"]
+```
+
+### Runtime Settings
+Within the `spec` of a `JsPolicy` object, you can also define certain settings that are relevant during the execution of a policy:
+- `violationPolicy`: `deny` (default) or `warn` (for testing) when the policy logic calls the `deny()` function
+- `failurePolicy`: `Fail` (default) or `Ignore` when jsPolicy fails to execute the policy or it aborts with a runtime error
+- `auditPolicy`: `Log` (default) or `Skip` logging any policy violations (requests that lead to `deny()`) in the status of this policy
+- `auditLogSize`: Maximum number of violations that should be stored in the status of this policy (default: `10` violations)
+- `timeoutSeconds`: Maximum number of seconds that the execution of the policy logic may take before jsPolicy aborts the policy execution (default: `10` seconds, maximum is `30`)
+
+```yaml {7-20}
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "validate-images.company.tld"
+spec:
+  operations: ["CREATE", "UPDATE"]
+  resources: ["pods", "deployments"]
+  violationPolicy: warn
+  failurePolicy: Ignore
+  auditPolicy: Skip
+  timeoutSeconds: 30
+```
+
+## Write Policy Logic
+There are different ways to write policy logic for JsPolicy. The following table compares three common workflows:
+
+|                   |            [Embedded `spec.javascript`](#embdedded-specjavascript)             |                 [Separate JavaScript](#separate-javascript)                |                     [TypeScript](#typescript)                     |
+|------------------:|:-----------------------------------------:|:--------------------------------------------------:|:--------------------------------------------------:|
+| Language Features |        JavaScript ES5 (vanilla JS)        |               JavaScript ES6 (modern)              |                 TypeScript (modern)                |
+| Type Safety       | no                                        | no                                                 | yes                                                |
+| IDE Support       | bad (JavaScript in YAML)                  | good                                               | great (auto-completion, warnings, types)           |
+| Testing           | only end-to-end via test kubectl requests | unit, functional and  end-to-end tests             | unit, functional and  end-to-end tests             |
+| Publishing        | only via `JsPolicy` YAML files            | via npm packages                                   | via npm packages                                   |
+| JsBundle Generation        | automatic by JsPolicy            | manual or via dev tools (SDK)          | manual or via dev tools (SDK)    |
+| SDK               |                     -                     | **[JsPolicy SDK](../writing-policies/policy-sdk.mdx)** | **[JsPolicy SDK](../writing-policies/policy-sdk.mdx)** |
+
+
+### Embdedded `spec.javascript`
+The most trivial option to write policy code in JsPolicy is to embed JavaScript ES5 (vanilla JS) code into the JsPolicy object:
+```yaml
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "deny-default-namespace.company.tld"
+spec:
+  operations: ["CREATE"]
+  resources: ["*"]
+  scope: Namespaced
+  javascript: |
+    if (request.namespace === "default") {
+      deny("Creation of resources within the default namespace is not allowed!");
+    }
+```
+
+#### `spec.dependencies`
+
+
+### Separate JavaScript
+
+
+### TypeScript
+
+
+
+
+## Best Practices
+- use sdk
+- create bundle first
+- use TypeScript

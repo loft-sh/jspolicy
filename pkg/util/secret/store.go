@@ -2,13 +2,14 @@ package secret
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+
 	"github.com/loft-sh/jspolicy/pkg/util/certhelper"
 	"github.com/loft-sh/jspolicy/pkg/util/clienthelper"
 	"github.com/pkg/errors"
-	"io/ioutil"
 	"k8s.io/klog"
-	"os"
-	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -19,7 +20,7 @@ import (
 
 const (
 	// WebhookCertSecretName is the name of the js policy webhook certificate
-	WebhookCertSecretName = "js-policy-webhook-cert"
+	WebhookCertSecretName = "jspolicy-webhook-cert"
 )
 
 func EnsureCertSecrets(ctx context.Context, client client.Client) error {

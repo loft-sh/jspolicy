@@ -1,0 +1,41 @@
+---
+title: Policy Types
+sidebar_label: Policy Types
+---
+
+import PolicyTypesTableFragment from "../fragments/policy-types.mdx"
+
+
+jsPolicy supports three types of policies:
+
+<PolicyTypesTableFragment/>
+
+## `Mutating`
+Mutating policies are executed as part of `kubectl` requests right after the API server performs authentication and authorization (RBAC). The objective of mutating policies is to change the payload (Kubernetes object) provided in a request, e.g. add/remove a label in the `metadata.labels` of a Kubernetes object that is being created.
+
+Possible examples for mutating policies would be:
+- Adding mandatory labels or annotations to the metadata of an object
+- Auto-completing certain fields, e.g. adding a `nodeSelector` for a `Pod` or a `PodSpec` in a `Deployment`
+- Replacing placeholders, i.e. a user may create an `Ingress` with `host: myhostname.#BASE_HOSTNAME#` and the mutating policy may replace `#BASE_HOSTNAME#` with `company.tld`
+
+Since mutating policies change the request's object, Kubernetes executes them sequentially, so that they do not interfere with each other.
+
+## `Validating`
+Validating policies are executed as part of `kubectl` requests after the execution of mutating policies. The objective of validating policies is to inspect the request and then to either deny or allow it. 
+
+Popular examples for validating policies are:
+- Denying access to certain namespaces
+- Denying the use of certain labels of ingress resources
+- Ensuring that there are no conflicting ingress hostnames
+
+Since validating policies cannot modify the request, all matching policies that are validating are executed in parallel. If any of the policies denies the request, the request will be denied. Only if none of the policies denies the request, Kubernetes will process the request and modify the persisted cluster state in etcd.
+
+## `Controller`
+Unlike mutating and validating policies, controller policies are **not** part of the lifecycle of a request to the Kubernetes API server. Controller policies are triggered by the `Events` that Kubernetes creates for each change of the cluster state in etcd, e.g. if you create a new `Deployment` or update an `Ingress`, Kubernetes creates an `Event` for this change. The objective of controller policies is to react to changes to your cluster's state.
+
+Examples of use cases foc controller policies could be:
+- Automatically creating certain resources in every newly created namespace (e.g. `LimitRange`, `NetworkPolicy` etc.)
+- Sending statistical information about the creation of new objects to an analytics server
+- If an `Event` tells us that a certain resource has been deleted, we may want to delete certain related resources
+
+jsPolicy detects `Events` in your cluster and calls the matching controller policies with the contents of these events.

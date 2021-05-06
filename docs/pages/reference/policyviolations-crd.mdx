@@ -1,0 +1,27 @@
+---
+title: JsPolicyViolations CRD
+sidebar_label: JsPolicyViolations
+---
+
+```yaml
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicyViolations
+metadata:
+  name: "policy-name.company.tld"
+status:
+  violations:
+  - action: "deny"
+    code: 500
+    message: "Namespace 'default' not allowed!"
+    reason: "namespace_disallowed"
+    requestInfo:
+      operation: ""
+      apiVersion: "v1"
+      kind: "Pod"
+      name: "nginx"
+      namespace: "default"
+    userInfo:
+      uid: "uid"
+      username: "admin"
+    timestamp: "2021-05-05T00:32:02Z"
+```

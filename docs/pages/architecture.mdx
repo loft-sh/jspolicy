@@ -1,0 +1,33 @@
+---
+title: Architecture
+sidebar_label: Architecture
+---
+
+import ArchitectureDiagramFragment from "./fragments/architecture-diagram.mdx"
+
+jsPolicy is a policy engine for Kubernetes that allows you to write policies in JavaScript or TypeScript.
+
+<ArchitectureDiagramFragment/>
+
+
+## Components
+Although jsPolicy runs all of its components in a single container (not considering replicas when you scale up the replica number for high-availability), jsPolicy logically consists of three main components:
+- [Webhook Manager](#webhook-manager)
+- [V8 JavaScript Sandbox Pool](#v8-javascript-sandbox-pool)
+- [Policy Compiler](#policy-compiler)
+
+
+### Webhook Manager
+The webhook manager is responsible for registering and managing admission webhooks with the Kubernetes API server, so that API server requests will apply the mutating and validating webhooks that are defined as `JsPolicy` objects.
+
+
+### V8 JavaScript Sandbox Pool
+For faster execution of policy code, jsPolicy maintains a pool of pre-heated V8 JavaScript sandboxes that can be used to run JavaScript code containing policy logic.
+
+### Policy Compiler
+The policy compiler is a controller that monitors `JsPolicy` resources and that creates and updates `JsPolicyBundle` objects for all `JsPolicy` objects that define the `spec.javascript` field. The compilation process looks about like this:
+1. Retrieve all required `npm` packages specified in `spec.dependencies` (similar to `npm install` downloading the `dependencies` specified in a `package.json` file of a regular JavaScript project)
+2. Run `webpack` to create a highly optimized bundle of JavaScript code that contains the code from `spec.javascript` and all dependencies while only bundling the functions that are actually needed for the execution of the code.
+3. Compress the bundle using `gzip`.
+4. Encode the bundle using `base64`.
+5. Store the bundle in `spec.bundle` within the respective `JsPolicyBundle` object.

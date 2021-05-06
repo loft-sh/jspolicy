@@ -1,0 +1,63 @@
+---
+title: jsPolicy SDK
+sidebar_label: jsPolicy SDK
+---
+
+While there are many ways to write policies, you can use the [jsPolicy SDK](https://github.com/loft-sh/jspolicy-sdk) to get up and running faster and build on best practices. The jsPolicy SDK provides a project structure, some development and testing tools as well as some guidance on how to efficiently write, test and publish policies using TypeScript (or JavaScript).
+
+## Using jsPolicy SDK
+The [jsPolicy SDK project on GitHub](https://github.com/loft-sh/jspolicy-sdk) is desined as a template for you to get started with.
+
+### 1. Clone Template Project
+So, to use jsPolicy SDK, clone the project:
+```bash
+git clone https://github.com/loft-sh/jspolicy-sdk mypolicies
+cd mypolicies
+```
+
+### 2. Install Dev Dependencies
+This project has several `devDependencies` defined in the `package.json`, so let's install them:
+```bash
+npm install
+```
+
+### 3. Write & Compile Policies
+The project is structured like this:
+```bash
+|- src/              # Source Code
+|   |--- lib/        # Shared policy logic for common things (e.g. validateImages is used for pod and deployment validation policies)
+|   |--- policies/   # Contains folders that represent one policy each (1x policy.yaml + 1x index.yaml as entrypoint)
+|   |--- util/       # Shared utility functions (not policy specific, small helpers)
+|   |--- index.ts    # Specifies all functions that are exported and are intended to be reused by others that use this package after you publish this project to npmjs.com for example
+|
+|- tests/            # Contains tests (this project uses Jest by default)
+|- lib/              # Temporary folder that the project uses to output the JavaScript code that has been generated from the TypeScript files
+|- policies/         # The SDK will output your policies as yaml files in this folder, so you can apply them with `kubectl apply -f policies/`
+```
+
+To compile the policies defined in `src/policies` to ready-to-use `JsPolicy` + `JsPolicyBundle` combos, run:
+```bash
+npm run compile         # will compile policies and output them to `policies/`
+```
+
+For a more efficient hot reloading workflow, run:
+```bash
+npm run watch           # watches for file changes in src/ and compiles policies iteratively
+```
+
+To also apply the policies after each iterative compile process, run:
+```bash
+npm run watch-apply     # think: npm run watch && kubectl apply -f policies/
+```
+
+### 4. Test Policies
+The project is configured to use `Jest` and execute all files in `tests/` as test suites. You can run the tests with this command:
+```bash
+npm run test
+```
+
+### 5. Publish Policy Logic
+If you want to share policy logic from your `lib/` folder, make sure you export the functions you want to make available by adding these functions in `src/index.ts` and then publish the project:
+```bash
+npm publish
+```

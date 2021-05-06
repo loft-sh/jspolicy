@@ -1,0 +1,34 @@
+---
+title: Cleanup
+sidebar_label: Cleanup
+---
+
+You can remove jsPolicy from your cluster by uninstalling the Helm deployment and deleting all associated cluster-wide resources.
+
+## Delete Helm Release
+To uninstall jsPolicy, it is highly recommended to use Helm:
+```bash
+helm delete -n jspolicy jspolicy
+```
+
+**After** deleting the jsPolicy Helm release, you may also delete the corresponding namespace:
+```bash
+kubectl delete namespace jspolicy
+```
+
+:::caution Delete Webhook
+If you accidentially deleted the namespace without deleting the jsPolicy Helm release beforehand, you will have to remove the webhook manually or requests to your cluster may fail due to the failing webhook:
+```bash
+kubectl delete validatingwebhookconfiguration jspolicy
+```
+:::
+
+
+## Delete CRDs (optional)
+```bash
+kubectl api-resources --api-group='policy.jspolicy.com' -o name | xargs kubectl delete crd
+```
+
+:::warning Data Loss
+Deleting the jsPolicy CRDs will also remove all jsPolicy objects inside your cluster, i.e. all `JsPolicy`, `JsPolicyBundle`, and `JsPolicyViolations` objects.
+:::

@@ -1,0 +1,31 @@
+---
+title: Understand jsPolicy
+sidebar_label: Understand jsPolicy
+---
+
+import PolicyTypesFragment from "../fragments/policy-types.mdx"
+import ArchitectureDiagramFragment from "../fragments/architecture-diagram.mdx"
+
+jsPolicy is a policy engine for Kubernetes that allows you to write policies in JavaScript or TypeScript.
+
+<ArchitectureDiagramFragment/>
+
+
+## `JsPolicy` CRD
+jsPolicy provides three types of policies:
+
+<PolicyTypesFragment/>
+
+
+## `JsPolicyBundle` CRD
+There are two ways to provide policy code to jsPolicy:
+1. Placing raw JavaScript code as a string into the `spec.javascript` field of a `JsPolicy` object (see [Quickstart](../quickstart.mdx) example policy)
+2. Creating a `PolicyBundle` object with the same name as the corresponding `JsPolicy` object and placing a base64 encoded and gzip compressed version of your JavaScript code in the `spec.bundle` field of the `PolicyBundle` object
+
+Creating the `PolicyBundle` object yourself has the advantage that you can easily generate it automatically from JavaScript or TypeScript code using tools such as `webpack` which lets you write and test your policy code as part of regular JavaScript or TypeScript projects rather than having to place JavaScript code inside YAML code which will cause issues with auto-completion, type checks, linting and other convenience features of your IDE. Additionally, you can use TypeScript and ES6 language features which are otherwise not supported.
+
+If you choose the trivial option 1 and you place your policy code directly inside the `spec.javascript` field of a `JsPolicy`, the Policy Compiler of jsPolicy will detect this and automatically generate a `PolicyBundle` object out of this JavaScript code using `webpack`.
+
+
+## `JsPolicyViolations` CRD
+jsPolicy creates `JsPolicyViolations` objects with information about denied requests and errors during the execution of policies. These objects can be queried using `kubectl` and the Kubernetes API server to set up alerting and monitoring for policy exection.

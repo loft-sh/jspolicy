@@ -1,0 +1,35 @@
+---
+title: JsPolicy CRD
+sidebar_label: JsPolicy
+---
+
+```yaml
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "policy-name.company.tld"
+spec:
+  type: Validating
+  operations: ["CREATE"]
+  resources: ["*"]
+  objectSelector: {}
+  namespaceSelector: {}
+  scope: Namespaced
+  apiGroups: ["*"]
+  apiVersions: ["*"]
+  matchPolicy: "Equivalent"
+  violationPolicy: "deny"
+  failurePolicy: ""
+  auditPolicy: ""
+  auditLogSize: 10
+  dependencies: 
+    "@jspolicy/package-1": "^1.0.0"
+    "@jspolicy/package-2": "~2.0.0"
+  javascript: "/* JS CODE HERE */"
+  timeoutSeconds: 10
+status:
+  phase: "Synced"
+  message: "This is a human-readable error (if any)"
+  reason: "error_reason_if_any"
+  bundleHash: ""
+```

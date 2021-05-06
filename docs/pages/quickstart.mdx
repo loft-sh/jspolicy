@@ -1,0 +1,46 @@
+---
+title: Quickstart Guide
+sidebar_label: Quickstart
+---
+
+import InstallFragment from "./fragments/install.mdx"
+
+
+## 1. Install jsPolicy
+
+<InstallFragment/>
+
+
+## 2. Create a Policy
+Create the file `policy.yaml`:
+```yaml
+# policy.yaml
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "deny-default-namespace.company.tld"
+spec:
+  operations: ["CREATE"]
+  resources: ["*"]
+  scope: Namespaced
+  javascript: |
+    if (request.namespace === "default") {
+      deny("Creation of resources within the default namespace is not allowed!");
+    }
+```
+
+:::note Policy Code
+Note that for the sake of simplicity, the above example places the policy logic directly inside the YAML definition of this JsPolicy resource. To take full advantage of JavaScript or TypeScript development and testing tooling, you may want to load the policy code directly from a JavaScript or TypeScript file. See [Writing Policies](./writing-policies/workflow.mdx) for details.
+:::
+
+## 3. Apply The Policy
+Apply the policy in your cluster:
+```bash
+kubectl apply -f policy.yaml
+```
+
+
+## 4. See Policy In Action
+```bash
+kubectl create deployment nginx-deployment -n default --image=nginx
+```

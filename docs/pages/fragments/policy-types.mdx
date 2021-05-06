@@ -1,0 +1,13 @@
+|         `type:` | [`Mutating`](../using-policies/policy-types.mdx#mutating)                  | [`Validating`](../using-policies/policy-types.mdx#validating)                  | [`Controller`](../using-policies/policy-types.mdx#controller)                   |
+|----------------:|:---------------------------:|:-----------------------------:|:------------------------------:|
+| Trigger         | Requests to k8s API server  |   Requests to k8s API server  | Changes to k8s object (Events) |
+| Execution Order |          sequential         |            parallel           |             queued             |
+| Expected Result |  `mutate()` request object  | `allow()` or `deny()` request |            anything            |
+
+`Mutating` and `Validating` policies run during a HTTP request to the Kubernetes API server. After Kubernetes performs authentication and authorization (RBAC), it runs the `Mutating` policies sequentially and then runs all `Validating` policies in parallel. If any of the `Validating` policies calls `deny()`, the request will be aborted and not persited in etcd.
+
+`Controller` policies are **not** part of any Kubernetes API server request. Instead, they are triggered asynchronuously by `Events` in your Kubernetes cluster. Every CRUD operation on any of the Kubernetes objects in your cluster creates an `Event`. jsPolicy listens to these events and executes the matching `Controller` policies which can perform any kind of action in response to an `Event`, including also executing other CRUD operations in your cluster.
+
+:::note Deny vs Warn
+Mutating and validating policies may also use `warn()` to display warnings to client, i.e. these warnings will not impact the request itself but they are shown in the `kubectl` output for example.
+:::

@@ -1,0 +1,87 @@
+---
+title: Apply Existing Policies & Policy Logic
+sidebar_label: Basics
+---
+
+This page explains how to use existing policy logic and how to apply/enforce it in your cluster. If you are interested in writing (and potentially publishing) your own policy logic, read the [writing policies and policy logic guide](../writing-policies/workflow.mdx).
+
+Existing policy logic comes in three forms:
+1. [`JsPolicy` YAML files](#jspolicy-yaml-files) ready to be applied with `kubectl apply -f policy.yaml`
+2. [`JsPolicy` + `JsPolicyBundle` YAML files](#jspolicy--jspolicybundle-combo) usable with `kubectl apply -f policy.bundle.yaml -f policy.yaml`
+3. [`npm` packages](#npm-packages) that export policy logic as functions that can be called in your own, custom `JsPolicy` objects
+
+<br/>
+
+:::caution Caution
+Before you apply a 3rd-party policy to your cluster, make sure that:
+- You understand what the policy does in your cluster
+- You [understand how jsPolicy works](../getting-started/understand-jspolicy.mdx)
+- You [understand the different types of policies](../using-policies/policy-types.mdx)
+
+Policies are very powerful and can block/deny `kubectl` requests for example, so make sure you know what you are doing before applying a policy.
+:::
+
+
+## `JsPolicy` YAML files
+If someone shares a standalone `JsPolicy` object as a YAML file with you (or you created the file yourself), then you will likely find the `spec.javascript` field showing come JavaScript code embedded inside the YAML. Optionally, there may also be the `spec.dependencies` field filled with a list of `npm` packages that are used within this policy.
+
+To apply such a policy in your cluster, simply create the `JsPolicy` object in your cluster:
+```bash
+kubectl apply -f policy.yaml
+```
+
+Under the hood, jsPolicy takes the `spec.javascript` code and creates a `JsPolicyBundle` object for you:
+```bash
+kubectl get jspolicybundle
+```
+
+The `JsPolicyBundle` will have the same name as the `JsPolicy` and the `spec.bundle` field will contain an optimized, base64 encoded and compressed version of the JavaScript code including all required dependencies. This bundle code is used by jsPolicy to actually execute this policy. If you update the `spec.javascript` in a `JsPolicy` object, jsPolicy will detect this change and re-generate the matching `JsPolicyBundle`.
+
+
+## `JsPolicy` + `JsPolicyBundle` Combo
+You may also find a combination of a `JsPolicy` object with a matching `JsPolicyBundle` object that both have the same name. In this case, the author of the policy already provides a pre-compiled `JsPolicyBundle` and the `JsPolicy` object will not contain the field `spec.javascript`.
+
+To use such a combination, it is recommended (but not required) to apply the bundle first:
+```bash
+# Combo as separate files:
+kubectl apply -f policy.bundle.yaml         # apply JsPolicyBundle
+kubectl apply -f policy.yaml                # apply JsPolicy
+
+# Combo as single file:
+kubectl apply -f policy-and-bundle.yaml     # should contain JsPolicyBundle + "---" + JsPolicy
+```
+
+:::tip Apply Bundle First
+It is recommended to apply the `JsPolicyBundle` first because as soon as the `JsPolicy` exists in the cluster, it will be active immediately and if the corresponding `JsPolicyBundle` is not existing yet, all requests for this policy will fail until the `JsPolicyBundle` will be created. In the worst case, jsPolicy even denies the creation of the `JsPolicyBundle` because the `JsPolicy` you just created is matching the `kubectl apply -f policy.bundle.yaml` request and jsPolicy is unable to load the code for this policy.
+:::
+
+
+## `npm` Packages
+Someone may publish policy logic in the form of an `npm` package on [npmjs.org](https://npmjs.com/), via [GitHub's npm registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry) or in your own company-wide or private `npm` registry.
+
+While you can use any `npm` package containing policy-related functions while [writing your own policies](../writing-policies/workflow.mdx), the easiest way to use policy code from `npm` packages, is to define a `JsPolicy` with an entry in `spec.dependencies` as shown in this example:
+
+```yaml title="policy.yaml"
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "restrict-namespaces.company.tld"
+spec:
+  operations: ["CREATE"]
+  resources: ["*"]
+  scope: Namespaced
+  dependencies:
+    "@jspolicy/policies": "^0.0.1"
+  javascript: |
+    import { disallowNamespaces } from "@jspolicy/policies";
+    
+    disallowNamespaces(["default", "kube-system", /^prod-.*/])
+```
+
+This example `policy.yaml` file loads the `npm` package `@jspolicy/policies` as a dependency and could specify other dependencies similar to the `dependencies` statement in a regular `package.json` of a JavaScript project. Then, inside the `spec.javascript` field, this dependency is imported and a function of this package is called in our policy code.
+
+To instantiate this policy, just apply it to your cluster:
+```bash
+kubectl apply -f policy.yaml
+```
+As with any `JsPolicy` object that provides the `spec.javascript` field, jsPolicy will generate a corresponding `JsPolicyBundle`. This bundle will also contain the code for the `disallowNamespaces` function since this function is imported in our policy code and will be directly embedded so that jsPolicy does not need to download any packages later on when executing this policy. This makes the execution of policies extremly fast even if they are using external packages.

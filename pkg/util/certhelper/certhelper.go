@@ -9,13 +9,14 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"github.com/loft-sh/jspolicy/pkg/util/clienthelper"
 	"io/ioutil"
 	"math/big"
 	mathrand "math/rand"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/loft-sh/jspolicy/pkg/util/clienthelper"
 )
 
 const (
@@ -103,7 +104,7 @@ func generateCertificate(folder string, service string) error {
 	template := &x509.Certificate{
 		SerialNumber: big.NewInt(generateSerialNumber()),
 		Subject: pkix.Name{
-			Organization: []string{"js-policy"},
+			Organization: []string{"jspolicy"},
 		},
 		DNSNames: []string{
 			fmt.Sprintf("%s.%s.svc", service, namespace),

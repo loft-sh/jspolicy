@@ -1,0 +1,13 @@
+---
+title: Publishing Policies
+sidebar_label: Publishing Policies
+---
+
+Publishing policies to share them with others has never been easier than with jsPolicy. As a policy author, you have the following options to make a policy available for others:
+1. Share a `JsPolicy` YAML file ready to be applied with `kubectl apply -f policy.yaml`
+2. Share a `JsPolicy` + `JsPolicyBundle` YAML file combo ready to be applied with `kubectl apply -f policy.bundle.yaml -f policy.yaml`
+3. Publish an `npm` package containing utility functions or entire policy implementations that others can require/import and easily execute inside the `spec.javascript` field of their `JsPolicy` objects or in any other policy-related code that will be compiled to a `JsPolicyBundle` later on
+
+:::tip Contribute To The Policy Catalog
+On this documentation site, we are maintaining a [Policy Catalog](../using-policies/policy-catalog.mdx) with ready-to-use policies and policy logic. [Open a pull-request on GitHub](https://github.com/loft-sh/jspolicy/edit/main/docs/pages/using-policies/policy-catalog.mdx) to add a policy that you want to contribute to the policy catalog.
+:::
