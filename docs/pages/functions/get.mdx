@@ -18,7 +18,7 @@ jsPolicy also supports 'smart' caching for `get()`, where it tries to find a res
 
 This example shows how you can use the `get()` function in a JsPolicy.
 
-```yaml
+```
 apiVersion: policy.jspolicy.com/v1beta1
 kind: JsPolicy
 metadata:
@@ -37,7 +37,7 @@ spec:
     } else {
       print("Pod found");
     }
-
+    
     // this will try to find the namespace first in the cache (fast) and if not found will
     // try to find it without cache (slow). Usually trying to get the resource from the cache
     // is enough, but there might be cases where some requests are faster than cache updates. 
