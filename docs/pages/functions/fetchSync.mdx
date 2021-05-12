@@ -7,7 +7,7 @@ The `fetchSync()` function allows you to make http(s) requests to backend server
 
 ### Example 
 This policy will print the current IP address of the node where jsPolicy runs on and tries to query an address that does not exist.
-```yaml
+```
 apiVersion: policy.jspolicy.com/v1beta1
 kind: JsPolicy
 metadata:
@@ -26,7 +26,7 @@ spec:
     if (res.ok) {
       print("jspolicy ip: " + res.json().ip);
     }
-
+    
     // you can also use try catch to handle network errors
     try {
       fetchSync("https://this.will.not.exist.tld");

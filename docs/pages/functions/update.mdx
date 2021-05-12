@@ -7,7 +7,7 @@ The `update()` function allows you to update any object within the Kubernetes cl
 
 ### Example
 
-```yaml
+```
 apiVersion: policy.jspolicy.com/v1beta1
 kind: JsPolicy
 metadata:
@@ -18,7 +18,7 @@ spec:
   javascript: |
     // update() is able to update any resource in the kubernetes cluster
     // update() takes parameters in the form of (newObject)
-
+    
     // this will update the namespace and set the amount of pods in the namespace annotations
     const namespace = get("Namespace", "v1", request.namespace);
     const pods = list("Pod", "v1", {namespace: request.namespace});
