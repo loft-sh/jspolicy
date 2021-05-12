@@ -1,0 +1,46 @@
+---
+title: create() Function
+sidebar_label: create()
+---
+
+The `create()` function is able to create any resource in the kubernetes cluster, by passing it a Kubernetes object. JsPolicy will then try to create the object in the cluster and return the created object or an error if creation has failed. The execution will block as long as the creation is in progress.
+
+### Example
+
+This example will create a new configmap every time a new pod is created.
+```yaml
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "create.resource.example"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    // create() is able to create any resource in the kubernetes cluster
+    // create() takes parameters in the form of (object)
+    
+    // this will create a new configmap in the namespace with the same name as
+    // the pod and contains all the container names.
+    const result = create({
+      kind: "ConfigMap",
+      apiVersion: "v1",
+      metadata: {
+        "name": request.object.metadata.name,
+        "namespace": request.object.metadata.namespace
+      },
+      data: {
+        containers: (request.object.spec?.containers || []).map(container => container.name).join(",")
+      }
+    });
+    if (!result.ok) {
+      // check for a specific error type
+      if (result.reason === "AlreadyExists") {
+        warn(`ConfigMap already exists`);
+      } else {
+        warn(`Error creating ConfigMap (Reason ${result.reason}): ${result.message}`);
+      }
+    } else {
+      print("Created ConfigMap", result.object);
+    }
+```

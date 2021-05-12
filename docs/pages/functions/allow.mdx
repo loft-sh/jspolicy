@@ -1,0 +1,26 @@
+---
+title: allow() Function
+sidebar_label: allow()
+---
+
+`allow()` will allow a request and terminate execution immediately. This means that statements after `allow()` will not be executed anymore.
+
+### Example
+
+This example policy will deny pod creation in the default namespace.
+```yaml
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "allow.resource.example"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    if (request.namespace !== "default") {
+      allow(); // allow request and exit
+    }
+    
+    deny("Do not create pods in the default namespace");
+```
+

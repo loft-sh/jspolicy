@@ -1,0 +1,39 @@
+---
+title: readFileSync() Function
+sidebar_label: readFileSync()
+---
+
+The `readFileSync()` function will read a local file in the jsPolicy container and return the contents as a string. If the file cannot be found `undefined` will be returned.
+
+### Example
+
+This example shows how you can directly access the Kubernetes API within a policy, without calling any of the predefined jsPolicy functions except `readFileSync` and `fetchSync`.
+```yaml
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "read-file-policy.example.com"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    // read service account token.
+    const token = readFileSync("/var/run/secrets/kubernetes.io/serviceaccount/token");
+  
+    // retrieve all namespaces from the kube service directly, isn't that cool?
+    const res = fetchSync("https://kubernetes.default/api/v1/namespaces", {
+      "method": "GET",
+      "insecure": true,
+      "headers": {
+        "Authorization": "bearer " + token
+      }
+    })
+    if (res.ok) {
+      const namespaceList = res.json();
+      namespaceList.items.forEach(namespace => {
+        print(namespace.metadata.name);
+      });
+    } else {
+      print("Something went wrong (" + res.status + "): " + res.text());
+    }
+```

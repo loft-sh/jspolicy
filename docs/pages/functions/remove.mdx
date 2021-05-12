@@ -1,0 +1,39 @@
+---
+title: remove() Function
+sidebar_label: remove()
+---
+
+The `remove()` function is able to delete any resource in the Kubernetes cluster. `remove()` takes parameters in the form of `remove(oldToDelete)`. JsPolicy will then try to delete this object in the Kubernetes cluster and return the deleted object on success or an error if deletion has failed.
+
+### Example
+
+This example shows how to delete an object in the cluster via `remove()`.
+```yaml
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "remove.resource.example"
+spec:
+  operations: ["DELETE"]
+  resources: ["pods"]
+  javascript: |
+    // remove() is able to delete any resource in the kubernetes cluster
+    // remove() takes parameters in the form of (oldObject)
+    // this will delete a configmap in the namespace with the same name as the pod
+    const configMap = get("ConfigMap", "v1", request.namespace + "/" + request.name);
+    if (configMap) {
+      const result = remove(configMap);
+      if (!result.ok) {
+        // check for a specific error type
+        if (result.reason === "NotFound") {
+          warn(`ConfigMap was deleted by someone else`);
+        } else {
+          warn(`Error deleting ConfigMap (Reason ${result.reason}): ${result.message}`);
+        }
+      } else {
+        print("Deleted ConfigMap", result.object);
+      }
+    } else {
+      warn(`ConfigMap ${request.namespace}/${request.name} was not found`);
+    }
+```

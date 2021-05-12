@@ -1,0 +1,23 @@
+---
+title: exit() Function
+sidebar_label: exit()
+---
+
+The `exit()` function stops execution immediately. In a validating or mutating policy, this is equal to calling `allow()`, because if no `deny()` is called a request is always allowed (expect if there is a javascript error or timeout).
+
+### Example
+
+```yaml
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "env.example.com"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    exit();
+    
+    // this is never reached
+    deny("I'm not executed");
+```

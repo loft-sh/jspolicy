@@ -1,0 +1,35 @@
+---
+title: deny() Function
+sidebar_label: deny()
+---
+
+The `deny()` function denies a request immediately and halts execution. You can specify a message, reason and code via the parameters, which will printed to the client. In controller policies, `dency()` will only log the request to the violations log of a policy.
+
+:::info Deny Behaviour 
+You can specify what action deny should do by using the `spec.violationPolicy` in a `JsPolicy`. Valid options are `Deny` (default), `Warn` or `Dry`
+::: 
+
+### Example
+
+This example shows how deny can be used.
+
+```yaml
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "deny.resource.example"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    // deny kube-system namespace 
+    if (request.namespace === "kube-system") {
+      deny("No new pod allowed in kube-system");
+    }
+    
+    // deny default namespace with reason and code
+    if (request.namespace === "default") {
+      deny("No new pod allowed in default", "BadRequest", 400);
+    }
+```
+
