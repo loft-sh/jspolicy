@@ -1,0 +1,32 @@
+---
+title: mutate() Function
+sidebar_label: mutate()
+---
+
+The `mutate()` function only works in mutating policies and tells jsPolicy to calculate a patch between the original `request.object` and the newly passed object. 
+As soon as `mutate(changedObj)` is called, execution will be stopped. JsPolicy will remember the original `request.object`, which means you can freely change this object within the policy and call `mutate(request.object)` afterwards.
+If the passed object and the original object do not have any differences, jsPolicy will do nothing.
+
+### Example
+
+```yaml
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "set-annotation.example.com"
+spec:
+  type: Mutating
+  operations: ["CREATE", "UPDATE"]
+  resources: ["pods"]
+  javascript: |
+    // This policy will set a required annotation on a pod during CREATE or UPDATE
+    if (request.object.metadata.annotations?.["required-annotation"] !== "is-required") {
+      // set annotation required-annotation=is-required
+      request.object.metadata.annotations = {...request.object.metadata.annotations, 'required-annotation': 'is-required'};
+          
+      // tell jspolicy to calc the patch and exit
+      mutate(request.object);
+    }
+
+    // if execution reaches here, request is allowed and nothing happens
+```

@@ -1,0 +1,37 @@
+---
+title: fetchSync() Function
+sidebar_label: fetchSync()
+---
+
+The `fetchSync()` function allows you to make http(s) requests to backend servers to record or query information. The syntax is similar to the standard [fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch) API, however with the difference that `fetchSync` does not return a promise and instead executes the request synchronously. 
+
+### Example 
+This policy will print the current IP address of the node where jsPolicy runs on and tries to query an address that does not exist.
+```yaml
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "fetch.example.com"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    // use fetchSync to make requests to backend servers
+    const res = fetchSync("https://ip.seeip.org/jsonip", {
+      method: "GET",
+      headers: {
+        "X-Custom-HTTP-Header": "test"
+      },
+    });
+    if (res.ok) {
+      print("jspolicy ip: " + res.json().ip);
+    }
+
+    // you can also use try catch to handle network errors
+    try {
+      fetchSync("https://this.will.not.exist.tld");
+    } catch(err) {
+      print("Catched fetchSync: " + err);
+    }
+```
+

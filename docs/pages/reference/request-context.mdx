@@ -5,28 +5,68 @@ sidebar_label: "`request` Context"
 
 ## Action
 ### `operation`
+Operation is the operation being performed. Can be either "CREATE", "UPDATE", "DELETE" or "CONNECT". This may be different than the original operation requested. e.g. a patch can result in either a CREATE or UPDATE Operation. In controller policies this can be only CREATE or DELETE.
+
 ### `dryRun`
+DryRun indicates that modifications will definitely not be persisted for this request.
 
 ## Object
 ### `object`
+Object is the object from the incoming request. In CREATE or UPDATE request this will be filled, in DELETE requests this is empty.
+
 ### `oldObject`
+OldObject is the currently existing object. Only populated for DELETE and UPDATE requests.
 
 ## Object Metadata
-### `kind`
+### `kind.kind`
+### `kind.group`
+### `kind.version`
+Kind is the fully-qualified type of object being submitted (for example, v1.Pod or autoscaling.v1.Scale)
+
 ### `name`
+Name is the name of the object as presented in the request. On a CREATE operation, the client may omit name and rely on the server to generate the name.  If that is the case, this field will contain an empty string.
+
 ### `namespace`
-### `resource`
+Namespace is the namespace associated with the request (if any).
+
+### `resource.resource`
+### `resource.group`
+### `resource.version`
+Resource is the fully-qualified resource being requested (for example, v1.pods)
+
 ### `subResource`
+SubResource is the subresource being requested, if any (for example, "status" or "scale")
 
 ## User
 ### `userInfo`
+UserInfo is information about the requesting user
+
 #### `username`
+The name that uniquely identifies this user among all active users.
+
 #### `uid`
+A unique value that identifies this user across time. If this user is deleted and another user by the same name is added, they will have different UIDs.
+
 #### `groups`
+The names of groups this user is a part of.
+
 #### `extra`
+Any additional information provided by the authenticator.
 
 ## Request Metadata
 ### `uid`
+UID is an identifier for the individual request/response. It allows us to distinguish instances of requests which are otherwise identical (parallel requests, requests when earlier requests did not modify etc).
+The UID is meant to track the round trip (request/response) between the KAS and the WebHook, not the user request.
+It is suitable for correlating log entries between the webhook and apiserver, for either auditing or debugging.
+
 ### `requestKind`
+RequestKind is the fully-qualified type of the original API request (for example, v1.Pod or autoscaling.v1.Scale).
+If this is specified and differs from the value in "kind", an equivalent match and conversion was performed.
+
 ### `requestResource`
+RequestResource is the fully-qualified resource of the original API request (for example, v1.pods).
+If this is specified and differs from the value in "resource", an equivalent match and conversion was performed.
+
 ### `requestSubResource`
+RequestSubResource is the name of the subresource of the original API request, if any (for example, "status" or "scale").
+If this is specified and differs from the value in "subResource", an equivalent match and conversion was performed.

@@ -1,0 +1,54 @@
+---
+title: get() Function
+sidebar_label: get()
+---
+
+The `get()` function is able to retrieve any resource from the kubernetes cluster either cached or directly. `get()` takes parameters in the form of `get(Kind, apiVersion, Name, GetOptions?)`. 
+If the resource cannot be found `undefined` is returned. 
+If another error occurred a Javascript exception will be raised.
+
+If you call `get()` or `list()` within a policy, jsPolicy will by default try to get the resources from its internal cache to save time and ease pressure on the api server.
+You do not need to configure in jsPolicy which resources are cached by jsPolicy as it will figure this out automatically by tracking which resources are called in get() and list().
+If resources are not needed anymore in the cache (after no `get()` or `list()` has been called for a specific time), jsPolicy will delete its internal cache for that resource automatically.
+
+You can explicitly tell jsPolicy to make a direct call to the api server instead of retrieving the resources from the cache via the get or list options. 
+jsPolicy also supports 'smart' caching for `get()`, where it tries to find a resource in the cache first and if not found will try to retrieve it from the api server.
+
+### Example
+
+This example shows how you can use the `get()` function in a JsPolicy.
+
+```yaml
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "get.resource.example"
+spec:
+  operations: ["CREATE"]
+  resources: ["pods"]
+  javascript: |
+    // get() is able to retrieve any resource from the kubernetes cluster either cached or directly
+    // get() takes parameters in the form of (Kind, apiVersion, Name, GetOptions?)
+    
+    // will also work with other CRDs, if the object cannot be found 'undefined' is returned.
+    const pod = get("Pod", "v1", "my-namespace/my-pod");
+    if (!pod) {
+      print("Pod not found");
+    } else {
+      print("Pod found");
+    }
+
+    // this will try to find the namespace first in the cache (fast) and if not found will
+    // try to find it without cache (slow). Usually trying to get the resource from the cache
+    // is enough, but there might be cases where some requests are faster than cache updates. 
+    const namespace = get("Namespace", "v1", request.namespace, {cache: 'smart'});
+    if (!namespace) {
+      warn("Namespace not found");
+    } 
+        
+    // you can also force cache behaviour by setting the 'cache' option to 'true' or 'false'
+    const ingress = get("Ingress", "networking.k8s.io/v1", "my-namespace/my-config-map", {cache: false}) 
+    if (ingress) {
+      print("Found ingress");
+    }
+```
