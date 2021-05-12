@@ -5,7 +5,7 @@ sidebar_label: Workflow
 
 Writing policies for jsPolicy generally means that you need to define two things:
 1. [Policy Settings](#configure-policy-settings): `JsPolicy` specifies the type of policy and defines when this policy should apply
-2. [Policy Logic](#write-policy-logic): `JsPolicyBundle` contains the policy logic in the form of base64 encoded, compressed JavaScript code
+2. [Policy Logic](#write-policy-logic): Put the logic into the `spec.javascript` of a `JsPolicy` or use a separate `JsPolicyBundle` that contains the policy logic in the form of base64 encoded, compressed JavaScript code
 
 
 ## Configure Policy Settings
@@ -66,6 +66,8 @@ spec:
   matchPolicy: "Equivalent"
   apiGroups: ["*"]
   apiVersions: ["*"]
+  # Optional javascript here
+  # javascript: if ...
 ```
 
 ### Runtime Settings
@@ -95,7 +97,7 @@ There are different ways to write policy logic for JsPolicy. The following table
 
 |                   |            [Embedded `spec.javascript`](#embdedded-specjavascript)             |                 [Separate JavaScript](#separate-javascript)                |                     [TypeScript](#typescript)                     |
 |------------------:|:-----------------------------------------:|:--------------------------------------------------:|:--------------------------------------------------:|
-| Language Features |        JavaScript ES5 (vanilla JS)        |               JavaScript ES6 (modern)              |                 TypeScript (modern)                |
+| Language |        JavaScript        |               JavaScript              |                 TypeScript (modern)                |
 | Type Safety       | no                                        | no                                                 | yes                                                |
 | IDE Support       | bad (JavaScript in YAML)                  | good                                               | great (auto-completion, warnings, types)           |
 | Testing           | only end-to-end via test kubectl requests | unit, functional and  end-to-end tests             | unit, functional and  end-to-end tests             |
@@ -123,16 +125,12 @@ spec:
 
 #### `spec.dependencies`
 
+With this option you can define dependencies that you want to load for this policy. You can specify any [CommonJS](https://en.wikipedia.org/wiki/CommonJS) package from the npm registry here or import your own packages.
 
 ### Separate JavaScript
 
+You can use a separate JavaScript project to build, test and deploy your policies. Any language that can get cross-compiled to Javascript is supported. Take a look at our [TypeScript example](https://github.com/loft-sh/jspolicy/tree/main/examples/typescript-policy) to see how to cross compile TypeScript to JavaScript and use this in a `JsPolicy`.
 
 ### TypeScript
 
-
-
-
-## Best Practices
-- use sdk
-- create bundle first
-- use TypeScript
+Please take a look at our [Policy SDK](../writing-policies/policy-sdk.mdx) or [TypeScript example](https://github.com/loft-sh/jspolicy/tree/main/examples/typescript-policy) on how to write policies in typescript.
