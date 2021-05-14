@@ -1,9 +1,26 @@
 apiVersion: v2
 name: jspolicy
 description: JavaScript Policies for Kubernetes
-home: https://github.com/loft-sh/jspolicy
+icon: https://static.loft.sh/jspolicy/logo/jspolicy-logo-black.svg
+home: https://www.jspolicy.com
 sources:
 - https://github.com/loft-sh/jspolicy
+keywords:
+- developer
+- development
+- sharing
+- share
+- multi-tenancy
+- tenancy
+- cluster
+- space
+- namespace
+- vcluster
+- vclusters
+maintainers:
+- name: Loft Labs, Inc.
+  email: info@loft.sh
+  url: https://twitter.com/loft_sh
 
 # A chart can be either an 'application' or a 'library' chart.
 #
