@@ -12,7 +12,7 @@ spec:
     // this webhook will copy the namespace annotations and set them to the pod
     const namespace = get("Namespace", "v1", request.namespace);
     
-    // copy annotations
+    // copy annotations from namespace
     request.object.metadata.annotations = namespace?.metadata?.annotations;
 
     // automatically calculate patch and exit
