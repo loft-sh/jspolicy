@@ -222,11 +222,11 @@ var warn = (message) => {
 	__response.warnings.push(message);
 };
 var deny = (message, reason, code) => {
-	__response.deny = true;
-	__response.message = message;
-    __response.reason = reason;
-    __response.code = code;
-	exit();
+        __response.deny = true;
+        __response.message = message;
+        __response.reason = reason;
+        __response.code = code;
+        exit();
 };
 var list = (kind, groupVersion, options) => {
 	return __throw(__list(kind, groupVersion, options)).list;
