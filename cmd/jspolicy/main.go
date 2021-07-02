@@ -17,10 +17,12 @@ import (
 	"github.com/loft-sh/jspolicy/pkg/webhook"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog"
 	"math/rand"
 	"net/http"
 	"os"
+	sigcache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"strconv"
@@ -102,7 +104,9 @@ func main() {
 
 	// create the manager
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
-		ClientBuilder:      blockingcacheclient.NewCacheClientBuilder(),
+		NewClient: func(cache sigcache.Cache, config *rest.Config, options client.Options, uncachedObjects ...client.Object) (client.Client, error) {
+			return blockingcacheclient.NewCacheClient(cache, config, options)
+		},
 		Scheme:             scheme,
 		MetricsBindAddress: ":8080",
 		CertDir:            certhelper.WebhookCertFolder,
