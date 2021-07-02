@@ -86,6 +86,10 @@ kubectl apply -f policy.yaml
 kubectl create deployment nginx-deployment -n default --image=nginx
 ```
 
+## Contributing
+
+Thank you for your interest in contributing! Please refer to
+[CONTRIBUTING.md](https://github.com/loft-sh/jspolicy/blob/main/CONTRIBUTING.md) for guidance.
 
 <br>
 

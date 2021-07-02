@@ -42,6 +42,7 @@ dev:
         - '**'
         - '!/cmd'
         - '!/pkg'
+        - '!/hack'
         - '!/vendor'
         - '!/go.mod'
         - '!/go.sum'
