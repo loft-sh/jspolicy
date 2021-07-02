@@ -6,7 +6,7 @@ export GOFLAGS=-mod=vendor
 
 # Test if we can build the program
 echo "Building js policy..."
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build cmd/jspolicy/main.go || exit 1
+GOOS=linux GOARCH=amd64 go build cmd/jspolicy/main.go || exit 1
 
 # List packages
 PKGS=$(go list ./... | grep -v /vendor/ | grep -v /examples/ | grep -v /test/)
