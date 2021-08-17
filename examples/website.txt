@@ -1,0 +1,32 @@
+Deny Default Namespace 
+>>> https://github.com/loft-sh/jspolicy/blob/main/examples/by-use-case/deny-default-namespace.yaml
+>>>
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "deny-default-namespace.example.com"
+spec:
+  operations: ["CREATE"]
+  resources: ["*"]
+  scope: Namespaced
+  javascript: |
+    if (request.namespace === "default") {
+      deny("Creation of resources within the default namespace is not allowed!");
+    }
+>>>
+apiVersion: v1
+kind: Pod
+metadata:
+  name: static-web
+  namespace: default
+  labels:
+    role: myrole
+spec:
+  containers:
+    - name: web
+      image: nginx
+      ports:
+        - name: web
+          containerPort: 80
+          protocol: TCP
+///
