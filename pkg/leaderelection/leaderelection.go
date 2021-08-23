@@ -41,7 +41,7 @@ func StartLeaderElection(ctx context.Context, scheme *runtime.Scheme, restConfig
 		return errors.Wrap(err, "create leader election client")
 	}
 
-	// Identity used to distinguish between multiple controller manager instances
+	// Identity used to distinguish between multiple controller instances
 	id, err := os.Hostname()
 	if err != nil {
 		return err
