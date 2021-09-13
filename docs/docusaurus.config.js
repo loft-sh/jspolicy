@@ -50,13 +50,13 @@ module.exports = {
           position: 'right',
         },
       ],
-    },/*
+    },
     algolia: {
-      apiKey: "107aff89c55ec52fca3d15dbb824d91c",
+      apiKey: "3bfe37ad9d4f78fd64329ace5b3dc3c6",
       indexName: "jspolicy",
       placeholder: "Search...",
       algoliaOptions: {}
-    },*/
+    },
     footer: {
       style: 'light',
       links: [],
