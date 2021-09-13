@@ -1,16 +1,110 @@
 ---
-title: Work with Policies
-sidebar_label: Work with Policies
+title: 3. Create & Test Policies
+sidebar_label: 3. Create & Test Policies
 ---
 
+import PolicyWritingComparisonFragment from "../fragments/policy-writing-comparison.mdx"
 
-## JavaScript Policies
+To write a policy with JsPolicy, we need to do two things:
+1. **Configure the [Policy Settings](#configure-policy-settings)** via the `JsPolicy` resource
+2. **Add [Policy Logic](#write-policy-logic)** either via embedding vanilla JavaScript code to `spec.javascript` inside the `JsPolicy` resource or by creating a separate `JsPolicyBundle` from compiled JavaScript or TypeScript code
 
-### Embedding Policy Logic
+## Configure Policy Settings
+All relevant settings for policies are stored inside the `JsPolicy` custom resource and there are three types of options:
+- [Policy Type](#policy-type): `Validating`, `Mutating`, or `Controller`
+- [Policy Trigger](#policy-trigger): defines for which kind of operations and objects the policy should be exectued
+- [Runtime Settings](#runtime-settings): define additional parameters that matter during the execution of the [policy logic](#policy-logic).
+
+An example of a JsPolicy object with these settings could look like this:
+```yaml {6-20}
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "mutate-images.company.tld"
+spec:
+  type: Mutating
+  operations: ["CREATE", "UPDATE"]
+  resources: ["pods", "deployments"]
+  scope: Namespaced
+  namespaceSelector:
+    matchExpressions:           # only trigger for namespaces with label "environment: prod" and/or label "environment: staging"
+    - key: environment
+      operator: In
+      values: ["prod","staging"]
+  objectSelector:               # all trigger for objects with label "live: true"
+    matchLabels:
+      live: "true"
+  # Optional javascript here if we choose to use inline vanilla JavaScript code
+  # javascript: if ...
+```
+
+### Policy Type
+The type of the policy tells jsPolicy what the policy is supposed to do:
+- `type: Mutating`: [mutate the object/payload of a request](../using-policies/policy-types.mdx#mutating) to the Kubernetes API server (mutating admission control webhook)
+- `type: Validating`: [validate requests](../using-policies/policy-types.mdx#validating) to the Kubernetes API server (validating admission control webhook)
+- `type: Controller`: [react to Kubernetes Events](../using-policies/policy-types.mdx#controller) after an object in your cluster has changed (reconciliation function of a Kubernetes controller)
+
+Learn more about the different [Policy Types](../using-policies/policy-types.mdx)
 
 
-### Creating Bundles
+### Policy Trigger
+Since you do **not** want all your policies to be executed every time for all interactions with all the objects in your Kubernetes cluster, you can limit for which objects a particular policy should trigger.
+
+The following options may be configured to specify when a particular policy should be triggered:
+- `operations`: An array of strings containing Kubernetes CRUD operations, i.e. any combination of `CREATE`, `UPDATE`, `DELETE`
+- `resources`: An array of strings stating Kubernetes resources, e.g. `pods`, `deployments`, `services` etc.
+- `scope`: A string stating if the operation is `Namespaced` or `Cluster`-wide (default value: `*` (means `Namespaced` || `Cluster`))
+- `namespaceSelector`: A [Kubernetes namespace selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-namespaceselector) which defines that a policy should only trigger for operations in namespaces with specific attributes (e.g. only namespaces with certain labels)
+- `objectSelector`: A [Kubernetes object selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector) which defines that a policy should only trigger for objects with specific attributes (e.g. only objects with certain labels)
+- `matchPolicy`: A string stating the [Kubernetes match policy](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-matchpolicy) which tells Kubernetes how fuzzy the `objectSelector` shall be applied (either `Exact` or `Equivalent`(default))
+- `apiGroups`: An array of strings stating [Kubernetes API groups](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-rules) (default: `*` matching any API group)
+- `apiVersions`: An array of strings stating [Kubernetes API versions](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-rules) (default: `*` matching any API version)
 
 
-## TypeScript Policies
+### Runtime Settings
+Within the `spec` of a `JsPolicy` object, you can also define certain settings that are relevant during the execution of a policy:
+- `violationPolicy`: `deny` (default) or `warn` (for testing) when the policy logic calls the `deny()` function
+- `failurePolicy`: `Fail` (default) or `Ignore` when jsPolicy fails to execute the policy or it aborts with a runtime error
+- `auditPolicy`: `Log` (default) or `Skip` logging any policy violations (requests that lead to `deny()`) in the status of this policy
+- `auditLogSize`: Maximum number of violations that should be stored in the status of this policy (default: `10` violations)
+- `timeoutSeconds`: Maximum number of seconds that the execution of the policy logic may take before jsPolicy aborts the policy execution (default: `10` seconds, maximum is `30`)
 
+
+
+## Write Policy Logic
+There are different ways to write policy logic for JsPolicy. The following table compares three common workflows:
+
+
+<PolicyWritingComparisonFragment/>
+
+
+### Inline JavaScript Policies
+Use the `spec.javascript` option of the `JsPolicy` CRD to write policy code inline as embedded JavaScript ES5 (vanilla JS):
+```yaml
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "deny-default-namespace.company.tld"
+spec:
+  operations: ["CREATE"]
+  resources: ["*"]
+  scope: Namespaced
+  javascript: |
+    if (request.namespace === "default") {
+      deny("Creation of resources within the default namespace is not allowed!");
+    }
+```
+
+#### Dependencies For Embedded JavaScript Policies
+
+Use the `spec.dependencies` option to define dependencies that you want to load for this policy. You can specify any [CommonJS](https://en.wikipedia.org/wiki/CommonJS) package from the npm registry here or import your own packages.
+
+### Separate JavaScript or TypeScript
+
+You can use a separate JavaScript project to build, test and deploy your policies. Any language that can get cross-compiled to Javascript is supported. Please take a look at our [Policy SDK](../writing-policies/policy-sdk.mdx) or [TypeScript example](https://github.com/loft-sh/jspolicy/tree/main/examples/typescript-policy) on how to write policies and compile them to `JsPolicy` and `JsPolicyBundle` objects.
+
+
+## Test Policies
+Of course, you can simply apply your policies via `kubectl apply` to any cluster and then run `kubectl` command to end-to-end test your policies. However, since your policy logic will be entirely written in JavaScript (or TypeScript which compiles to JavaScript), you can use any JavaScript testing framework to create and run test suits, including unit tests, functional tests, integration tests and end-to-end tests.
+
+See the example tests in the [jsPolicy SDK project on GitHub](https://github.com/loft-sh/jspolicy-sdk#run-jest-tests) for a reference implementation using the [test framework Jest](https://jestjs.io/) developed by Facebook.

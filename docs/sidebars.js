@@ -52,7 +52,8 @@ module.exports = {
       label: 'Write Policies',
       collapsed: false,
       items: [
-        'writing-policies/workflow',
+        'writing-policies/configuration',
+        'writing-policies/policy-code',
         'writing-policies/policy-sdk',
         'writing-policies/testing-policies',
         'writing-policies/publishing-policies',

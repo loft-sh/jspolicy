@@ -1,15 +1,16 @@
 ---
-title: Writing Policies & Policy Logic
-sidebar_label: Workflow
+title: Settings For JsPolicy Resources
+sidebar_label: Configuration
 ---
 
+
 Writing policies for jsPolicy generally means that you need to define two things:
-1. [Policy Settings](#configure-policy-settings): `JsPolicy` specifies the type of policy and defines when this policy should apply
-2. [Policy Logic](#write-policy-logic): Put the logic into the `spec.javascript` of a `JsPolicy` or use a separate `JsPolicyBundle` that contains the policy logic in the form of base64 encoded, compressed JavaScript code
+1. [Policy Settings](#configuration): `JsPolicy` specifies the type of policy and defines when this policy should apply
+2. [Policy Logic](./policy-code): Put the logic into the `spec.javascript` of a `JsPolicy` or use a separate `JsPolicyBundle` that contains the policy logic in the form of base64 encoded, compressed JavaScript code
 
 
-## Configure Policy Settings
-The settings of a policy are store inside the `JsPolicy` custom resource and has three types of options:
+## Configuration
+All relevant settings for policies are stored inside the `JsPolicy` custom resource and there are three types of options:
 - [Policy Type](#policy-type): `Validating`, `Mutating`, or `Controller`
 - [Policy Trigger](#policy-trigger): defines for which kind of operations and objects the policy should be exectued
 - [Runtime Settings](#runtime-settings): define additional parameters that matter during the execution of the [policy logic](#policy-logic).
@@ -91,46 +92,3 @@ spec:
   auditPolicy: Skip
   timeoutSeconds: 30
 ```
-
-## Write Policy Logic
-There are different ways to write policy logic for JsPolicy. The following table compares three common workflows:
-
-|                   |            [Embedded `spec.javascript`](#embdedded-specjavascript)             |                 [Separate JavaScript](#separate-javascript)                |                     [TypeScript](#typescript)                     |
-|------------------:|:-----------------------------------------:|:--------------------------------------------------:|:--------------------------------------------------:|
-| Language |        JavaScript        |               JavaScript              |                 TypeScript (modern)                |
-| Type Safety       | no                                        | no                                                 | yes                                                |
-| IDE Support       | bad (JavaScript in YAML)                  | good                                               | great (auto-completion, warnings, types)           |
-| Testing           | only end-to-end via test kubectl requests | unit, functional and  end-to-end tests             | unit, functional and  end-to-end tests             |
-| Publishing        | only via `JsPolicy` YAML files            | via npm packages                                   | via npm packages                                   |
-| JsBundle Generation        | automatic by JsPolicy            | manual or via dev tools (SDK)          | manual or via dev tools (SDK)    |
-| SDK               |                     -                     | **[JsPolicy SDK](../writing-policies/policy-sdk.mdx)** | **[JsPolicy SDK](../writing-policies/policy-sdk.mdx)** |
-
-
-### Embdedded `spec.javascript`
-The most trivial option to write policy code in JsPolicy is to embed JavaScript ES5 (vanilla JS) code into the JsPolicy object:
-```yaml
-apiVersion: policy.jspolicy.com/v1beta1
-kind: JsPolicy
-metadata:
-  name: "deny-default-namespace.company.tld"
-spec:
-  operations: ["CREATE"]
-  resources: ["*"]
-  scope: Namespaced
-  javascript: |
-    if (request.namespace === "default") {
-      deny("Creation of resources within the default namespace is not allowed!");
-    }
-```
-
-#### `spec.dependencies`
-
-With this option you can define dependencies that you want to load for this policy. You can specify any [CommonJS](https://en.wikipedia.org/wiki/CommonJS) package from the npm registry here or import your own packages.
-
-### Separate JavaScript
-
-You can use a separate JavaScript project to build, test and deploy your policies. Any language that can get cross-compiled to Javascript is supported. Take a look at our [TypeScript example](https://github.com/loft-sh/jspolicy/tree/main/examples/typescript-policy) to see how to cross compile TypeScript to JavaScript and use this in a `JsPolicy`.
-
-### TypeScript
-
-Please take a look at our [Policy SDK](../writing-policies/policy-sdk.mdx) or [TypeScript example](https://github.com/loft-sh/jspolicy/tree/main/examples/typescript-policy) on how to write policies in typescript.

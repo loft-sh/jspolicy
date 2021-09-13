@@ -1,0 +1,44 @@
+---
+title: Writing Policy Logic
+sidebar_label: Policy Logic
+---
+
+import PolicyWritingComparisonFragment from "../fragments/policy-writing-comparison.mdx"
+
+
+Writing policies for jsPolicy generally means that you need to define two things:
+1. [Policy Settings](./configuration): `JsPolicy` specifies the type of policy and defines when this policy should apply
+2. [Policy Logic](#write-policy-logic): Put the logic into the `spec.javascript` of a `JsPolicy` or use a separate `JsPolicyBundle` that contains the policy logic in the form of base64 encoded, compressed JavaScript code
+
+
+## Write Policy Logic
+There are different ways to write policy logic for JsPolicy. The following table compares three common workflows:
+
+
+<PolicyWritingComparisonFragment/>
+
+
+### Inline JavaScript Policies
+Use the `spec.javascript` option of the `JsPolicy` CRD to write policy code inline as embedded JavaScript ES5 (vanilla JS):
+```yaml
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "deny-default-namespace.company.tld"
+spec:
+  operations: ["CREATE"]
+  resources: ["*"]
+  scope: Namespaced
+  javascript: |
+    if (request.namespace === "default") {
+      deny("Creation of resources within the default namespace is not allowed!");
+    }
+```
+
+#### Dependencies For Embedded JavaScript Policies
+
+Use the `spec.dependencies` option to define dependencies that you want to load for this policy. You can specify any [CommonJS](https://en.wikipedia.org/wiki/CommonJS) package from the npm registry here or import your own packages.
+
+### Separate JavaScript or TypeScript
+
+You can use a separate JavaScript project to build, test and deploy your policies. Any language that can get cross-compiled to Javascript is supported. Please take a look at our [Policy SDK](../writing-policies/policy-sdk.mdx) or [TypeScript example](https://github.com/loft-sh/jspolicy/tree/main/examples/typescript-policy) on how to write policies and compile them to `JsPolicy` and `JsPolicyBundle` objects.
