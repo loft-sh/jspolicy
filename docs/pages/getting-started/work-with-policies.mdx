@@ -13,7 +13,7 @@ To write a policy with JsPolicy, we need to do two things:
 All relevant settings for policies are stored inside the `JsPolicy` custom resource and there are three types of options:
 - [Policy Type](#policy-type): `Validating`, `Mutating`, or `Controller`
 - [Policy Trigger](#policy-trigger): defines for which kind of operations and objects the policy should be exectued
-- [Runtime Settings](#runtime-settings): define additional parameters that matter during the execution of the [policy logic](#policy-logic).
+- [Runtime Settings](#runtime-settings): define additional parameters that matter during the execution of the [policy logic](#write-policy-logic).
 
 An example of a JsPolicy object with these settings could look like this:
 ```yaml {6-20}

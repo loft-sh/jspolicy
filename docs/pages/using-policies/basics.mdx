@@ -3,7 +3,7 @@ title: Apply Existing Policies & Policy Logic
 sidebar_label: Basics
 ---
 
-This page explains how to use existing policy logic and how to apply/enforce it in your cluster. If you are interested in writing (and potentially publishing) your own policy logic, read the [writing policies and policy logic guide](../writing-policies/workflow.mdx).
+This page explains how to use existing policy logic and how to apply/enforce it in your cluster. If you are interested in writing (and potentially publishing) your own policy logic, read the [writing policies and policy logic guide](../writing-policies/policy-code.mdx).
 
 Existing policy logic comes in three forms:
 1. [`JsPolicy` YAML files](#jspolicy-yaml-files) ready to be applied with `kubectl apply -f policy.yaml`
@@ -59,7 +59,7 @@ It is recommended to apply the `JsPolicyBundle` first because as soon as the `Js
 ## `npm` Packages
 Someone may publish policy logic in the form of an `npm` package on [npmjs.org](https://npmjs.com/), via [GitHub's npm registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry) or in your own company-wide or private `npm` registry.
 
-While you can use any `npm` package containing policy-related functions while [writing your own policies](../writing-policies/workflow.mdx), the easiest way to use policy code from `npm` packages, is to define a `JsPolicy` with an entry in `spec.dependencies` as shown in this example:
+While you can use any `npm` package containing policy-related functions while [writing your own policies](../writing-policies/policy-code.mdx), the easiest way to use policy code from `npm` packages, is to define a `JsPolicy` with an entry in `spec.dependencies` as shown in this example:
 
 ```yaml title="policy.yaml"
 apiVersion: policy.jspolicy.com/v1beta1
