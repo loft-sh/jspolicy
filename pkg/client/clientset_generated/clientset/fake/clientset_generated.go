@@ -22,6 +22,8 @@ import (
 	clientset "github.com/loft-sh/jspolicy/pkg/client/clientset_generated/clientset"
 	policyv1beta1 "github.com/loft-sh/jspolicy/pkg/client/clientset_generated/clientset/typed/policy/v1beta1"
 	fakepolicyv1beta1 "github.com/loft-sh/jspolicy/pkg/client/clientset_generated/clientset/typed/policy/v1beta1/fake"
+	wgpolicyk8sv1alpha2 "github.com/loft-sh/jspolicy/pkg/client/clientset_generated/clientset/typed/policyreport/v1alpha2"
+	fakewgpolicyk8sv1alpha2 "github.com/loft-sh/jspolicy/pkg/client/clientset_generated/clientset/typed/policyreport/v1alpha2/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -79,4 +81,9 @@ var _ clientset.Interface = &Clientset{}
 // PolicyV1beta1 retrieves the PolicyV1beta1Client
 func (c *Clientset) PolicyV1beta1() policyv1beta1.PolicyV1beta1Interface {
 	return &fakepolicyv1beta1.FakePolicyV1beta1{Fake: &c.Fake}
+}
+
+// Wgpolicyk8sV1alpha2 retrieves the Wgpolicyk8sV1alpha2Client
+func (c *Clientset) Wgpolicyk8sV1alpha2() wgpolicyk8sv1alpha2.Wgpolicyk8sV1alpha2Interface {
+	return &fakewgpolicyk8sv1alpha2.FakeWgpolicyk8sV1alpha2{Fake: &c.Fake}
 }

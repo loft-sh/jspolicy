@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	policyv1beta1 "github.com/loft-sh/jspolicy/pkg/client/clientset_generated/clientset/typed/policy/v1beta1"
+	wgpolicyk8sv1alpha2 "github.com/loft-sh/jspolicy/pkg/client/clientset_generated/clientset/typed/policyreport/v1alpha2"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -30,18 +31,25 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	PolicyV1beta1() policyv1beta1.PolicyV1beta1Interface
+	Wgpolicyk8sV1alpha2() wgpolicyk8sv1alpha2.Wgpolicyk8sV1alpha2Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	policyV1beta1 *policyv1beta1.PolicyV1beta1Client
+	policyV1beta1       *policyv1beta1.PolicyV1beta1Client
+	wgpolicyk8sV1alpha2 *wgpolicyk8sv1alpha2.Wgpolicyk8sV1alpha2Client
 }
 
 // PolicyV1beta1 retrieves the PolicyV1beta1Client
 func (c *Clientset) PolicyV1beta1() policyv1beta1.PolicyV1beta1Interface {
 	return c.policyV1beta1
+}
+
+// Wgpolicyk8sV1alpha2 retrieves the Wgpolicyk8sV1alpha2Client
+func (c *Clientset) Wgpolicyk8sV1alpha2() wgpolicyk8sv1alpha2.Wgpolicyk8sV1alpha2Interface {
+	return c.wgpolicyk8sV1alpha2
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -69,6 +77,10 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
+	cs.wgpolicyk8sV1alpha2, err = wgpolicyk8sv1alpha2.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfig(&configShallowCopy)
 	if err != nil {
@@ -82,6 +94,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
 	cs.policyV1beta1 = policyv1beta1.NewForConfigOrDie(c)
+	cs.wgpolicyk8sV1alpha2 = wgpolicyk8sv1alpha2.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -91,6 +104,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.policyV1beta1 = policyv1beta1.New(c)
+	cs.wgpolicyk8sV1alpha2 = wgpolicyk8sv1alpha2.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

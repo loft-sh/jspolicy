@@ -2,7 +2,14 @@ package main
 
 import (
 	"context"
+	"math/rand"
+	"net/http"
+	"os"
+	"strconv"
+	"time"
+
 	policyv1beta1 "github.com/loft-sh/jspolicy/pkg/apis/policy/v1beta1"
+	policyreportv1alpha2 "github.com/loft-sh/jspolicy/pkg/apis/policyreport/v1alpha2"
 	"github.com/loft-sh/jspolicy/pkg/blockingcacheclient"
 	"github.com/loft-sh/jspolicy/pkg/cache"
 	"github.com/loft-sh/jspolicy/pkg/controller"
@@ -19,19 +26,15 @@ import (
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
-	"math/rand"
-	"net/http"
-	"os"
 	sigcache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-	"strconv"
-	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+
 	// +kubebuilder:scaffold:imports
 
 	// Make sure dep tools picks up these dependencies
@@ -57,6 +60,7 @@ func init() {
 	_ = apiextensionsv1.AddToScheme(scheme)
 
 	_ = policyv1beta1.AddToScheme(scheme)
+	_ = policyreportv1alpha2.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 
 	size := os.Getenv("VM_POOL_SIZE")
