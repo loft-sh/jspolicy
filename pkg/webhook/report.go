@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"strconv"
+	"time"
 
 	policyv1beta1 "github.com/loft-sh/jspolicy/pkg/apis/policy/v1beta1"
 	policyreportv1alpha2 "github.com/loft-sh/jspolicy/pkg/apis/policyreport/v1alpha2"
@@ -19,11 +20,23 @@ import (
 )
 
 const (
-	Source = "JsPolicy"
-	Prefix = "js-policy-report-ns-"
+	Source                  = "JsPolicy"
+	PolicyReportPrefix      = "js-policy-report-ns-"
+	ClusterPolicyReportName = "js-cluster-policy-report"
+
+	CategoryAnnotation = "policy.jspolicy.com/category"
+	SeverityAnnotation = "policy.jspolicy.com/severity"
 )
 
-func ReportRequest(ctx context.Context, client client.Client, request admission.Request, response admission.Response, jsPolicy *policyv1beta1.JsPolicy, scheme *runtime.Scheme, retryCounter int) {
+func ReportRequest(
+	ctx context.Context,
+	client client.Client,
+	request admission.Request,
+	response admission.Response,
+	jsPolicy *policyv1beta1.JsPolicy,
+	scheme *runtime.Scheme,
+	retryCounter int,
+) {
 	if response.Allowed || jsPolicy == nil || (jsPolicy.Spec.AuditPolicy != nil && *jsPolicy.Spec.AuditPolicy == policyv1beta1.AuditPolicySkip) {
 		return
 	} else if retryCounter == 0 {
@@ -31,9 +44,25 @@ func ReportRequest(ctx context.Context, client client.Client, request admission.
 		return
 	}
 
+	if request.Namespace != "" && request.Kind.Kind != "Namespace" {
+		handlePolicyReport(ctx, client, request, response, jsPolicy, scheme, retryCounter)
+	} else {
+		handClusterPolicyReport(ctx, client, request, response, jsPolicy, scheme, retryCounter)
+	}
+}
+
+func handlePolicyReport(
+	ctx context.Context,
+	client client.Client,
+	request admission.Request,
+	response admission.Response,
+	jsPolicy *policyv1beta1.JsPolicy,
+	scheme *runtime.Scheme,
+	retryCounter int,
+) {
 	// try to get the policy report
 	policyReport := &policyreportv1alpha2.PolicyReport{}
-	err := client.Get(ctx, types.NamespacedName{Name: Prefix + request.Namespace, Namespace: request.Namespace}, policyReport)
+	err := client.Get(ctx, types.NamespacedName{Name: PolicyReportPrefix + request.Namespace, Namespace: request.Namespace}, policyReport)
 	if err != nil {
 		if kerrors.IsNotFound(err) == false {
 			klog.Errorf("cannot log request for object %s %s as policy report object cannot be retrieved: %v", request.Kind.Kind, request.Name, err)
@@ -42,7 +71,7 @@ func ReportRequest(ctx context.Context, client client.Client, request admission.
 
 		policyReport = &policyreportv1alpha2.PolicyReport{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      Prefix + request.Namespace,
+				Name:      PolicyReportPrefix + request.Namespace,
 				Namespace: request.Namespace,
 			},
 		}
@@ -57,18 +86,9 @@ func ReportRequest(ctx context.Context, client client.Client, request admission.
 		ReportRequest(ctx, client, request, response, jsPolicy, scheme, retryCounter)
 		return
 	}
-	log.Printf("Found PolicyReport %s", Prefix+request.Namespace)
-
-	action := policyv1beta1.ViolationPolicyPolicyDeny
-	if jsPolicy.Spec.ViolationPolicy != nil {
-		action = *jsPolicy.Spec.ViolationPolicy
-	}
-	if jsPolicy.Spec.Type == policyv1beta1.PolicyTypeController {
-		action = policyv1beta1.ViolationPolicyPolicyController
-	}
 
 	// build the violation
-	policyresult := buildResult(&request, &response, jsPolicy, action)
+	policyresult := buildResult(&request, &response, jsPolicy, resolveAction(jsPolicy))
 
 	// add to status
 	if policyReport.Results == nil {
@@ -90,25 +110,109 @@ func ReportRequest(ctx context.Context, client client.Client, request admission.
 		policyReport.Summary.Skip += 1
 	}
 
+	updateOrRetry(ctx, policyReport, client, request, response, jsPolicy, scheme, retryCounter)
+}
+
+func handClusterPolicyReport(
+	ctx context.Context,
+	client client.Client,
+	request admission.Request,
+	response admission.Response,
+	jsPolicy *policyv1beta1.JsPolicy,
+	scheme *runtime.Scheme,
+	retryCounter int,
+) {
+	// try to get the cluster policy report
+	policyReport := &policyreportv1alpha2.ClusterPolicyReport{}
+	err := client.Get(ctx, types.NamespacedName{Name: ClusterPolicyReportName}, policyReport)
+	if err != nil {
+		if kerrors.IsNotFound(err) == false {
+			klog.Errorf("cannot log request for object %s %s as policy report object cannot be retrieved: %v", request.Kind.Kind, request.Name, err)
+			return
+		}
+
+		policyReport = &policyreportv1alpha2.ClusterPolicyReport{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: ClusterPolicyReportName,
+			},
+		}
+		err := clienthelper.CreateWithOwner(ctx, client, policyReport, jsPolicy, scheme)
+		if err != nil {
+			if kerrors.IsAlreadyExists(err) == false {
+				klog.Errorf("cannot log request for object %s %s as policy report object cannot be created: %v", request.Kind.Kind, request.Name, err)
+				return
+			}
+		}
+
+		ReportRequest(ctx, client, request, response, jsPolicy, scheme, retryCounter)
+		return
+	}
+
+	// build the violation
+	policyresult := buildResult(&request, &response, jsPolicy, resolveAction(jsPolicy))
+
+	// add to status
+	if policyReport.Results == nil {
+		policyReport.Results = []*policyreportv1alpha2.PolicyReportResult{}
+	}
+
+	policyReport.Results = append(policyReport.Results, policyresult)
+
+	switch policyresult.Result {
+	case policyreportv1alpha2.StatusFail:
+		policyReport.Summary.Fail += 1
+	case policyreportv1alpha2.StatusError:
+		policyReport.Summary.Error += 1
+	case policyreportv1alpha2.StatusWarn:
+		policyReport.Summary.Warn += 1
+	case policyreportv1alpha2.StatusPass:
+		policyReport.Summary.Pass += 1
+	case policyreportv1alpha2.StatusSkip:
+		policyReport.Summary.Skip += 1
+	}
+
+	updateOrRetry(ctx, policyReport, client, request, response, jsPolicy, scheme, retryCounter)
+}
+
+func updateOrRetry(
+	ctx context.Context,
+	object client.Object,
+	client client.Client,
+	request admission.Request,
+	response admission.Response,
+	jsPolicy *policyv1beta1.JsPolicy,
+	scheme *runtime.Scheme,
+	retryCounter int,
+) {
 	// try to update object
-	err = client.Update(ctx, policyReport)
+	err := client.Update(ctx, object)
 	if err != nil {
 		if kerrors.IsNotFound(err) {
 			return
 		} else if kerrors.IsConflict(err) {
 			log.Printf("ERROR %s", err.Error())
-			ReportRequest(ctx, client, request, response, jsPolicy, scheme, retryCounter)
+			ReportRequest(ctx, client, request, response, jsPolicy, scheme, retryCounter-1)
 			return
 		}
 
 		klog.Errorf("cannot log request for object %s %s: %v", request.Kind.Kind, request.Name, err)
 		return
 	}
-
-	log.Printf("Updated PolicyReport %s", Prefix+request.Namespace)
 }
 
-func mapResult(result policyv1beta1.ViolationPolicyType) policyreportv1alpha2.PolicyResult {
+func resolveAction(jsPolicy *policyv1beta1.JsPolicy) policyv1beta1.ViolationPolicyType {
+	action := policyv1beta1.ViolationPolicyPolicyDeny
+	if jsPolicy.Spec.ViolationPolicy != nil {
+		action = *jsPolicy.Spec.ViolationPolicy
+	}
+	if jsPolicy.Spec.Type == policyv1beta1.PolicyTypeController {
+		action = policyv1beta1.ViolationPolicyPolicyController
+	}
+
+	return action
+}
+
+func mapStatus(result policyv1beta1.ViolationPolicyType) policyreportv1alpha2.PolicyResult {
 	switch result {
 	case policyv1beta1.ViolationPolicyPolicyDeny:
 		return policyreportv1alpha2.StatusFail
@@ -121,9 +225,22 @@ func mapResult(result policyv1beta1.ViolationPolicyType) policyreportv1alpha2.Po
 	return policyreportv1alpha2.StatusSkip
 }
 
+func mapSeverity(severity string) policyreportv1alpha2.PolicySeverity {
+	switch severity {
+	case policyreportv1alpha2.SeverityLow:
+		return policyreportv1alpha2.SeverityLow
+	case policyreportv1alpha2.SeverityMedium:
+		return policyreportv1alpha2.SeverityMedium
+	case policyreportv1alpha2.SeverityHigh:
+		return policyreportv1alpha2.SeverityHigh
+	}
+
+	return policyreportv1alpha2.SeverityHigh
+}
+
 func buildResult(request *admission.Request, response *admission.Response, jsPolicy *policyv1beta1.JsPolicy, result policyv1beta1.ViolationPolicyType) *policyreportv1alpha2.PolicyReportResult {
 	policyresult := &policyreportv1alpha2.PolicyReportResult{
-		Result: mapResult(result),
+		Result: mapStatus(result),
 		Source: Source,
 		Resources: []*corev1.ObjectReference{
 			{
@@ -134,7 +251,16 @@ func buildResult(request *admission.Request, response *admission.Response, jsPol
 				UID:        request.UID,
 			},
 		},
-		Policy: jsPolicy.Name,
+		Policy:    jsPolicy.Name,
+		Timestamp: metav1.Timestamp{Seconds: time.Now().Unix()},
+	}
+
+	if category, ok := jsPolicy.Annotations[CategoryAnnotation]; ok {
+		policyresult.Category = category
+	}
+
+	if severity, ok := jsPolicy.Annotations[SeverityAnnotation]; ok {
+		policyresult.Severity = mapSeverity(severity)
 	}
 
 	if response.Result != nil {
