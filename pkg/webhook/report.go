@@ -35,6 +35,7 @@ func ReportRequest(
 	response admission.Response,
 	jsPolicy *policyv1beta1.JsPolicy,
 	scheme *runtime.Scheme,
+	maxEvents int,
 	retryCounter int,
 ) {
 	if response.Allowed || jsPolicy == nil || (jsPolicy.Spec.AuditPolicy != nil && *jsPolicy.Spec.AuditPolicy == policyv1beta1.AuditPolicySkip) {
@@ -45,9 +46,9 @@ func ReportRequest(
 	}
 
 	if request.Namespace != "" && request.Kind.Kind != "Namespace" {
-		handlePolicyReport(ctx, client, request, response, jsPolicy, scheme, retryCounter)
+		handlePolicyReport(ctx, client, request, response, jsPolicy, scheme, maxEvents, retryCounter)
 	} else {
-		handClusterPolicyReport(ctx, client, request, response, jsPolicy, scheme, retryCounter)
+		handClusterPolicyReport(ctx, client, request, response, jsPolicy, scheme, maxEvents, retryCounter)
 	}
 }
 
@@ -58,6 +59,7 @@ func handlePolicyReport(
 	response admission.Response,
 	jsPolicy *policyv1beta1.JsPolicy,
 	scheme *runtime.Scheme,
+	maxEvents int,
 	retryCounter int,
 ) {
 	// try to get the policy report
@@ -83,7 +85,7 @@ func handlePolicyReport(
 			}
 		}
 
-		ReportRequest(ctx, client, request, response, jsPolicy, scheme, retryCounter)
+		ReportRequest(ctx, client, request, response, jsPolicy, scheme, maxEvents, retryCounter)
 		return
 	}
 
@@ -96,6 +98,23 @@ func handlePolicyReport(
 	}
 
 	policyReport.Results = append(policyReport.Results, policyresult)
+	if len(policyReport.Results) > maxEvents {
+		removed := policyReport.Results[0]
+		policyReport.Results = policyReport.Results[1:]
+
+		switch removed.Result {
+		case policyreportv1alpha2.StatusFail:
+			policyReport.Summary.Fail -= 1
+		case policyreportv1alpha2.StatusError:
+			policyReport.Summary.Error -= 1
+		case policyreportv1alpha2.StatusWarn:
+			policyReport.Summary.Warn -= 1
+		case policyreportv1alpha2.StatusPass:
+			policyReport.Summary.Pass -= 1
+		case policyreportv1alpha2.StatusSkip:
+			policyReport.Summary.Skip -= 1
+		}
+	}
 
 	switch policyresult.Result {
 	case policyreportv1alpha2.StatusFail:
@@ -110,7 +129,7 @@ func handlePolicyReport(
 		policyReport.Summary.Skip += 1
 	}
 
-	updateOrRetry(ctx, policyReport, client, request, response, jsPolicy, scheme, retryCounter)
+	updateOrRetry(ctx, policyReport, client, request, response, jsPolicy, scheme, maxEvents, retryCounter)
 }
 
 func handClusterPolicyReport(
@@ -120,6 +139,7 @@ func handClusterPolicyReport(
 	response admission.Response,
 	jsPolicy *policyv1beta1.JsPolicy,
 	scheme *runtime.Scheme,
+	maxEvents int,
 	retryCounter int,
 ) {
 	// try to get the cluster policy report
@@ -144,7 +164,7 @@ func handClusterPolicyReport(
 			}
 		}
 
-		ReportRequest(ctx, client, request, response, jsPolicy, scheme, retryCounter)
+		ReportRequest(ctx, client, request, response, jsPolicy, scheme, maxEvents, retryCounter)
 		return
 	}
 
@@ -157,6 +177,24 @@ func handClusterPolicyReport(
 	}
 
 	policyReport.Results = append(policyReport.Results, policyresult)
+
+	if len(policyReport.Results) > maxEvents {
+		removed := policyReport.Results[0]
+		policyReport.Results = policyReport.Results[1:]
+
+		switch removed.Result {
+		case policyreportv1alpha2.StatusFail:
+			policyReport.Summary.Fail -= 1
+		case policyreportv1alpha2.StatusError:
+			policyReport.Summary.Error -= 1
+		case policyreportv1alpha2.StatusWarn:
+			policyReport.Summary.Warn -= 1
+		case policyreportv1alpha2.StatusPass:
+			policyReport.Summary.Pass -= 1
+		case policyreportv1alpha2.StatusSkip:
+			policyReport.Summary.Skip -= 1
+		}
+	}
 
 	switch policyresult.Result {
 	case policyreportv1alpha2.StatusFail:
@@ -171,7 +209,7 @@ func handClusterPolicyReport(
 		policyReport.Summary.Skip += 1
 	}
 
-	updateOrRetry(ctx, policyReport, client, request, response, jsPolicy, scheme, retryCounter)
+	updateOrRetry(ctx, policyReport, client, request, response, jsPolicy, scheme, maxEvents, retryCounter)
 }
 
 func updateOrRetry(
@@ -182,6 +220,7 @@ func updateOrRetry(
 	response admission.Response,
 	jsPolicy *policyv1beta1.JsPolicy,
 	scheme *runtime.Scheme,
+	maxEvents int,
 	retryCounter int,
 ) {
 	// try to update object
@@ -191,7 +230,7 @@ func updateOrRetry(
 			return
 		} else if kerrors.IsConflict(err) {
 			log.Printf("ERROR %s", err.Error())
-			ReportRequest(ctx, client, request, response, jsPolicy, scheme, retryCounter-1)
+			ReportRequest(ctx, client, request, response, jsPolicy, scheme, maxEvents, retryCounter-1)
 			return
 		}
 

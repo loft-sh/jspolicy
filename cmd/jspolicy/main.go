@@ -50,6 +50,9 @@ var (
 	VMPoolSize         = 4
 	CacheCleanupPeriod = time.Hour * 3
 	CacheResyncPeriod  = time.Hour * 6
+
+	EnablePolicyReports   = false
+	PolicyReportMaxEvents = 50
 )
 
 func init() {
@@ -71,6 +74,26 @@ func init() {
 		}
 
 		VMPoolSize = sizeInt
+	}
+
+	enablePolicyReports := os.Getenv("ENABLE_POLICY_REPORTS")
+	if enablePolicyReports != "" {
+		enablePolicyReportsBool, err := strconv.ParseBool(enablePolicyReports)
+		if err != nil {
+			klog.Fatalf("Error converting ENABLE_POLICY_REPORTS to bool: %v", err)
+		}
+
+		EnablePolicyReports = enablePolicyReportsBool
+	}
+
+	policyReportMaxEvents := os.Getenv("POLICY_REPORT_MAX_EVENTS")
+	if policyReportMaxEvents != "" {
+		policyReportMaxEventsInt, err := strconv.Atoi(policyReportMaxEvents)
+		if err != nil {
+			klog.Fatalf("Error converting POLICY_REPORT_MAX_EVENTS to number: %v", err)
+		}
+
+		PolicyReportMaxEvents = policyReportMaxEventsInt
 	}
 }
 
@@ -159,7 +182,7 @@ func main() {
 	controllerPolicyManager := controller.NewControllerPolicyManager(mgr, vmPool, cachedClient)
 
 	// Register webhooks
-	err = webhook.Register(mgr, vmPool)
+	err = webhook.Register(mgr, vmPool, EnablePolicyReports, PolicyReportMaxEvents)
 	if err != nil {
 		setupLog.Error(err, "unable to register webhooks")
 		os.Exit(1)

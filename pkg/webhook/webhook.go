@@ -37,7 +37,9 @@ type Webhook struct {
 	Handler Handler
 	Scheme  *runtime.Scheme
 
-	log logr.Logger
+	enablePolicyReports   bool
+	policyReportMaxEvents int
+	log                   logr.Logger
 }
 
 var _ http.Handler = &Webhook{}
@@ -120,8 +122,11 @@ func (wh *Webhook) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// check if we need to log response or modify it
 	if reviewResponse.Allowed == false {
 		if jsPolicy.Spec.AuditPolicy == nil || *jsPolicy.Spec.AuditPolicy != policyv1beta1.AuditPolicySkip {
-			go LogRequest(context.TODO(), wh.Client, req, reviewResponse, jsPolicy, wh.Scheme, 5)
-			go ReportRequest(context.TODO(), wh.Client, req, reviewResponse, jsPolicy, wh.Scheme, 5)
+			if wh.enablePolicyReports == false {
+				go LogRequest(context.TODO(), wh.Client, req, reviewResponse, jsPolicy, wh.Scheme, 5)
+			} else {
+				go ReportRequest(context.TODO(), wh.Client, req, reviewResponse, jsPolicy, wh.Scheme, wh.policyReportMaxEvents, 5)
+			}
 		}
 
 		if jsPolicy.Spec.ViolationPolicy != nil {

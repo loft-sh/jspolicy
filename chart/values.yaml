@@ -24,6 +24,10 @@ jspolicy:
       memory: 128Mi
       cpu: 50m
 
+policyReports:
+  enabled: false
+  maxEvents: 3
+
 serviceAccount:
   name: serviceaccount
   create: true
