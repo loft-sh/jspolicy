@@ -8,13 +8,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-func Register(mgr ctrl.Manager, vmPool vmpool.VMPool) error {
+func Register(mgr ctrl.Manager, vmPool vmpool.VMPool, enablePolicyReports bool, policyReportMaxEvents int) error {
 	genericWebhook := &Webhook{
 		Client:  mgr.GetClient(),
 		Handler: NewHandler(mgr.GetClient(), vmPool),
 		Scheme:  mgr.GetScheme(),
 
-		log: ctrl.Log.WithName("webhook"),
+		enablePolicyReports:   enablePolicyReports,
+		policyReportMaxEvents: policyReportMaxEvents,
+		log:                   ctrl.Log.WithName("webhook"),
 	}
 
 	webhookServer := mgr.GetWebhookServer()

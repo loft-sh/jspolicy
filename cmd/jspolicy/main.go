@@ -2,7 +2,14 @@ package main
 
 import (
 	"context"
+	"math/rand"
+	"net/http"
+	"os"
+	"strconv"
+	"time"
+
 	policyv1beta1 "github.com/loft-sh/jspolicy/pkg/apis/policy/v1beta1"
+	policyreportv1alpha2 "github.com/loft-sh/jspolicy/pkg/apis/policyreport/v1alpha2"
 	"github.com/loft-sh/jspolicy/pkg/blockingcacheclient"
 	"github.com/loft-sh/jspolicy/pkg/cache"
 	"github.com/loft-sh/jspolicy/pkg/controller"
@@ -19,19 +26,15 @@ import (
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
-	"math/rand"
-	"net/http"
-	"os"
 	sigcache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-	"strconv"
-	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+
 	// +kubebuilder:scaffold:imports
 
 	// Make sure dep tools picks up these dependencies
@@ -47,6 +50,9 @@ var (
 	VMPoolSize         = 4
 	CacheCleanupPeriod = time.Hour * 3
 	CacheResyncPeriod  = time.Hour * 6
+
+	EnablePolicyReports   = false
+	PolicyReportMaxEvents = 50
 )
 
 func init() {
@@ -57,6 +63,7 @@ func init() {
 	_ = apiextensionsv1.AddToScheme(scheme)
 
 	_ = policyv1beta1.AddToScheme(scheme)
+	_ = policyreportv1alpha2.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 
 	size := os.Getenv("VM_POOL_SIZE")
@@ -67,6 +74,26 @@ func init() {
 		}
 
 		VMPoolSize = sizeInt
+	}
+
+	enablePolicyReports := os.Getenv("ENABLE_POLICY_REPORTS")
+	if enablePolicyReports != "" {
+		enablePolicyReportsBool, err := strconv.ParseBool(enablePolicyReports)
+		if err != nil {
+			klog.Fatalf("Error converting ENABLE_POLICY_REPORTS to bool: %v", err)
+		}
+
+		EnablePolicyReports = enablePolicyReportsBool
+	}
+
+	policyReportMaxEvents := os.Getenv("POLICY_REPORT_MAX_EVENTS")
+	if policyReportMaxEvents != "" {
+		policyReportMaxEventsInt, err := strconv.Atoi(policyReportMaxEvents)
+		if err != nil {
+			klog.Fatalf("Error converting POLICY_REPORT_MAX_EVENTS to number: %v", err)
+		}
+
+		PolicyReportMaxEvents = policyReportMaxEventsInt
 	}
 }
 
@@ -155,7 +182,7 @@ func main() {
 	controllerPolicyManager := controller.NewControllerPolicyManager(mgr, vmPool, cachedClient)
 
 	// Register webhooks
-	err = webhook.Register(mgr, vmPool)
+	err = webhook.Register(mgr, vmPool, EnablePolicyReports, PolicyReportMaxEvents)
 	if err != nil {
 		setupLog.Error(err, "unable to register webhooks")
 		os.Exit(1)

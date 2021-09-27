@@ -5,15 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-logr/logr"
-	policyv1beta1 "github.com/loft-sh/jspolicy/pkg/apis/policy/v1beta1"
 	"io"
 	"io/ioutil"
-	"k8s.io/apimachinery/pkg/types"
 	"net/http"
+	"strings"
+
+	"github.com/go-logr/logr"
+	policyv1beta1 "github.com/loft-sh/jspolicy/pkg/apis/policy/v1beta1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-	"strings"
 
 	v1 "k8s.io/api/admission/v1"
 	"k8s.io/api/admission/v1beta1"
@@ -36,7 +37,9 @@ type Webhook struct {
 	Handler Handler
 	Scheme  *runtime.Scheme
 
-	log logr.Logger
+	enablePolicyReports   bool
+	policyReportMaxEvents int
+	log                   logr.Logger
 }
 
 var _ http.Handler = &Webhook{}
@@ -119,7 +122,11 @@ func (wh *Webhook) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// check if we need to log response or modify it
 	if reviewResponse.Allowed == false {
 		if jsPolicy.Spec.AuditPolicy == nil || *jsPolicy.Spec.AuditPolicy != policyv1beta1.AuditPolicySkip {
-			go LogRequest(context.TODO(), wh.Client, req, reviewResponse, jsPolicy, wh.Scheme, 5)
+			if wh.enablePolicyReports == false {
+				go LogRequest(context.TODO(), wh.Client, req, reviewResponse, jsPolicy, wh.Scheme, 5)
+			} else {
+				go ReportRequest(context.TODO(), wh.Client, req, reviewResponse, jsPolicy, wh.Scheme, wh.policyReportMaxEvents, 5)
+			}
 		}
 
 		if jsPolicy.Spec.ViolationPolicy != nil {

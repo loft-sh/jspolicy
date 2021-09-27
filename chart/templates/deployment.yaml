@@ -46,6 +46,14 @@ spec:
           - name: {{ $key | quote }}
             value: {{ $value | quote }}
           {{- end }}
+          {{- if .Values.policyReports.enabled }}
+          - name: ENABLE_POLICY_REPORTS
+            value: "true"
+          {{- if .Values.policyReports.maxEvents }}
+          - name: POLICY_REPORT_MAX_EVENTS
+            value: {{ .Values.policyReports.maxEvents | quote }}
+          {{- end }}
+          {{- end }}
         {{- if .Values.livenessProbe.enabled }}
         livenessProbe:
           httpGet:
