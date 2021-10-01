@@ -1,0 +1,14 @@
+{{- range $name, $spec := .Values.policies -}}
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: {{ $name | quote }}
+  labels:
+    app: {{ template "jspolicy.fullname" $ }}
+    chart: "{{ $.Chart.Name }}-{{ $.Chart.Version }}"
+    release: "{{ $.Release.Name }}"
+    heritage: "{{ $.Release.Service }}"
+spec:
+  {{- $spec | toYaml | nindent 2 }}
+---
+{{- end }}

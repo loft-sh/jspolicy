@@ -53,3 +53,16 @@ serviceMonitor:
   scrapeTimeout: 30s
   labels: {}
   
+# Create policies as part of the chart
+# policies is a map:
+#   the key is the name of the policy
+#   the value is the policy spec
+policies: {}
+#  "block-default-namespace.example.com" :
+#    operations: ["CREATE"]
+#    resources: ["*"]
+#    scope: Namespaced
+#    javascript: |
+#      if (request.namespace === "default") {
+#        deny("Creation of resources within the default namespace is not allowed!");
+#      }
