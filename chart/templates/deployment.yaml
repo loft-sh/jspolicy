@@ -22,6 +22,9 @@ spec:
     spec:
       terminationGracePeriodSeconds: 10
       serviceAccountName: {{ template "jspolicy.serviceAccountName" . }}
+    {{- if .Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 8 }}
+    {{- end }}
       containers:
       - ports:
         - name: webhook
