@@ -4,11 +4,13 @@
 
 package v8go
 
+// #include <stdlib.h>
 // #include "v8go.h"
 import "C"
 
 import (
 	"sync"
+	"unsafe"
 )
 
 var v8once sync.Once
@@ -22,6 +24,9 @@ type Isolate struct {
 	cbMutex sync.RWMutex
 	cbSeq   int
 	cbs     map[int]FunctionCallback
+
+	null      *Value
+	undefined *Value
 }
 
 // HeapStatistics represents V8 isolate heap statistics
@@ -46,7 +51,7 @@ type HeapStatistics struct {
 // by calling iso.Dispose().
 // An *Isolate can be used as a v8go.ContextOption to create a new
 // Context, rather than creating a new default Isolate.
-func NewIsolate() (*Isolate, error) {
+func NewIsolate() *Isolate {
 	v8once.Do(func() {
 		C.Init()
 	})
@@ -54,14 +59,66 @@ func NewIsolate() (*Isolate, error) {
 		ptr: C.NewIsolate(),
 		cbs: make(map[int]FunctionCallback),
 	}
-	// TODO: [RC] catch any C++ exceptions and return as error
-	return iso, nil
+	iso.null = newValueNull(iso)
+	iso.undefined = newValueUndefined(iso)
+	return iso
 }
 
 // TerminateExecution terminates forcefully the current thread
 // of JavaScript execution in the given isolate.
 func (i *Isolate) TerminateExecution() {
 	C.IsolateTerminateExecution(i.ptr)
+}
+
+// IsExecutionTerminating returns whether V8 is currently terminating
+// Javascript execution. If true, there are still JavaScript frames
+// on the stack and the termination exception is still active.
+func (i *Isolate) IsExecutionTerminating() bool {
+	return C.IsolateIsExecutionTerminating(i.ptr) == 1
+}
+
+type CompileOptions struct {
+	CachedData *CompilerCachedData
+
+	Mode CompileMode
+}
+
+// CompileUnboundScript will create an UnboundScript (i.e. context-indepdent)
+// using the provided source JavaScript, origin (a.k.a. filename), and options.
+// If options contain a non-null CachedData, compilation of the script will use
+// that code cache.
+// error will be of type `JSError` if not nil.
+func (i *Isolate) CompileUnboundScript(source, origin string, opts CompileOptions) (*UnboundScript, error) {
+	cSource := C.CString(source)
+	cOrigin := C.CString(origin)
+	defer C.free(unsafe.Pointer(cSource))
+	defer C.free(unsafe.Pointer(cOrigin))
+
+	var cOptions C.CompileOptions
+	if opts.CachedData != nil {
+		if opts.Mode != 0 {
+			panic("On CompileOptions, Mode and CachedData can't both be set")
+		}
+		cOptions.compileOption = C.ScriptCompilerConsumeCodeCache
+		cOptions.cachedData = C.ScriptCompilerCachedData{
+			data:   (*C.uchar)(unsafe.Pointer(&opts.CachedData.Bytes[0])),
+			length: C.int(len(opts.CachedData.Bytes)),
+		}
+	} else {
+		cOptions.compileOption = C.int(opts.Mode)
+	}
+
+	rtn := C.IsolateCompileUnboundScript(i.ptr, cSource, cOrigin, cOptions)
+	if rtn.ptr == nil {
+		return nil, newJSError(rtn.error)
+	}
+	if opts.CachedData != nil {
+		opts.CachedData.Rejected = int(rtn.cachedDataRejected) == 1
+	}
+	return &UnboundScript{
+		ptr: rtn.ptr,
+		iso: i,
+	}, nil
 }
 
 // GetHeapStatistics returns heap statistics for an isolate.
@@ -90,6 +147,19 @@ func (i *Isolate) Dispose() {
 	}
 	C.IsolateDispose(i.ptr)
 	i.ptr = nil
+}
+
+// ThrowException schedules an exception to be thrown when returning to
+// JavaScript. When an exception has been scheduled it is illegal to invoke
+// any JavaScript operation; the caller must return immediately and only after
+// the exception has been handled does it become legal to invoke JavaScript operations.
+func (i *Isolate) ThrowException(value *Value) *Value {
+	if i.ptr == nil {
+		panic("Isolate has been disposed")
+	}
+	return &Value{
+		ptr: C.IsolateThrowException(i.ptr, value.ptr),
+	}
 }
 
 // Deprecated: use `iso.Dispose()`.

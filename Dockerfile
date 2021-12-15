@@ -1,7 +1,7 @@
 # Build the manager binary
 FROM node:16 as builder
 
-COPY --from=golang:1.16 /usr/local/go/ /usr/local/go/
+COPY --from=golang:1.17 /usr/local/go/ /usr/local/go/
  
 ENV PATH="/usr/local/go/bin:${PATH}"
 

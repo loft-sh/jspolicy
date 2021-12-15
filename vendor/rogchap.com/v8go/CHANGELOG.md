@@ -6,11 +6,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.7.0] - 2021-12-09
+
+### Added
+- Support for calling constructors functions with NewInstance on Function
+- Access "this" from function callback
+- value.SameValue(otherValue) function to compare values for sameness
+- Undefined, Null functions to get these constant values for the isolate
+- Support for calling a method on an object.
+- Support for calling `IsExecutionTerminating` on isolate to check if execution is still terminating.
+- Support for setting and getting internal fields for template object instances
+- Support for CPU profiling
+- Add V8 build for Apple Silicon
+- Add support for throwing an exception directly via the isolate's ThrowException function.
+- Support for compiling a context-dependent UnboundScript which can be run in any context of the isolate it was compiled in.
+- Support for creating a code cache from an UnboundScript which can be used to create an UnboundScript in other isolates
+to run a pre-compiled script in new contexts.
+- Included compile error location in `%+v` formatting of JSError
+- Enable i18n support
+
+### Changed
+- Removed error return value from NewIsolate which never fails
+- Removed error return value from NewContext which never fails
+- Removed error return value from Context.Isolate() which never fails
+- Removed error return value from NewObjectTemplate and NewFunctionTemplate. Panic if given a nil argument.
+- Function Call accepts receiver as first argument.
+- Removed Windows support until its build issues are addressed.
+- Upgrade to V8 9.6.180.12
+
+### Fixed
+- Add some missing error propagation
+- Fix crash from template finalizer releasing V8 data, let it be disposed with the isolate
+- Fix crash by keeping alive the template while its C++ pointer is still being used
+- Fix crash from accessing function template callbacks outside of `RunScript`, such as in `JSONStringify`
+
+## [v0.6.0] - 2021-05-11
+
 ### Added
 - Promise resolver and promise result
 - Convert a Value to a Function and invoke it. Thanks to [@robfig](https://github.com/robfig)
 - Windows static binary. Thanks to [@cleiner](https://github.com/cleiner)
 - Setting/unsetting of V8 feature flags
+- Register promise callbacks in Go. Thanks to [@robfig](https://github.com/robfig)
+- Get Function from a template for a given context. Thanks to [@robfig](https://github.com/robfig)
 
 ### Changed
 - Upgrade to V8 9.0.257.18
