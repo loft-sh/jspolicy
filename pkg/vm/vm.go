@@ -40,141 +40,82 @@ type vm struct {
 }
 
 func NewVM(cachedClient cache2.Cache, uncachedClient clientpkg.Client, log LogFunc) (VM, error) {
-	iso, err := v8go.NewIsolate()
+	iso := v8go.NewIsolate()
+	global := v8go.NewObjectTemplate(iso)
+
+	printFn := printFn(iso, log)
+	err := global.Set("print", printFn, v8go.ReadOnly)
 	if err != nil {
 		return nil, err
 	}
 
-	global, err := v8go.NewObjectTemplate(iso)
-	if err != nil {
-		return nil, err
-	}
-
-	printFn, err := printFn(iso, log)
-	if err != nil {
-		return nil, err
-	}
-
-	err = global.Set("print", printFn, v8go.ReadOnly)
-	if err != nil {
-		return nil, err
-	}
-
-	sleepFn, err := sleepFn(iso)
-	if err != nil {
-		return nil, err
-	}
-
+	sleepFn := sleepFn(iso)
 	err = global.Set("sleep", sleepFn, v8go.ReadOnly)
 	if err != nil {
 		return nil, err
 	}
 
-	getFn, err := getFn(iso, cachedClient, uncachedClient)
-	if err != nil {
-		return nil, err
-	}
-
+	getFn := getFn(iso, cachedClient, uncachedClient)
 	err = global.Set("__get", getFn, v8go.ReadOnly)
 	if err != nil {
 		return nil, err
 	}
 
-	atobFn, err := atobFn(iso)
-	if err != nil {
-		return nil, err
-	}
-
+	atobFn := atobFn(iso)
 	err = global.Set("atob", atobFn, v8go.ReadOnly)
 	if err != nil {
 		return nil, err
 	}
 
-	btoaFn, err := btoaFn(iso)
-	if err != nil {
-		return nil, err
-	}
-
+	btoaFn := btoaFn(iso)
 	err = global.Set("btoa", btoaFn, v8go.ReadOnly)
 	if err != nil {
 		return nil, err
 	}
 
-	exitFn, err := exitFn(iso)
-	if err != nil {
-		return nil, err
-	}
-
+	exitFn := exitFn(iso)
 	err = global.Set("__exit", exitFn, v8go.ReadOnly)
 	if err != nil {
 		return nil, err
 	}
 
-	listFn, err := listFn(iso, cachedClient, uncachedClient)
-	if err != nil {
-		return nil, err
-	}
-
+	listFn := listFn(iso, cachedClient, uncachedClient)
 	err = global.Set("__list", listFn, v8go.ReadOnly)
 	if err != nil {
 		return nil, err
 	}
 
-	fetchFn, err := fetchFn(iso)
-	if err != nil {
-		return nil, err
-	}
-
+	fetchFn := fetchFn(iso)
 	err = global.Set("__fetchSync", fetchFn, v8go.ReadOnly)
 	if err != nil {
 		return nil, err
 	}
 
-	envFn, err := envFn(iso)
-	if err != nil {
-		return nil, err
-	}
-
+	envFn := envFn(iso)
 	err = global.Set("env", envFn, v8go.ReadOnly)
 	if err != nil {
 		return nil, err
 	}
 
-	readFileFn, err := readFileFn(iso)
-	if err != nil {
-		return nil, err
-	}
-
+	readFileFn := readFileFn(iso)
 	err = global.Set("readFileSync", readFileFn, v8go.ReadOnly)
 	if err != nil {
 		return nil, err
 	}
 
-	createFn, err := createFn(iso, uncachedClient)
-	if err != nil {
-		return nil, err
-	}
-
+	createFn := createFn(iso, uncachedClient)
 	err = global.Set("__create", createFn, v8go.ReadOnly)
 	if err != nil {
 		return nil, err
 	}
 
-	updateFn, err := updateFn(iso, uncachedClient)
-	if err != nil {
-		return nil, err
-	}
-
+	updateFn := updateFn(iso, uncachedClient)
 	err = global.Set("__update", updateFn, v8go.ReadOnly)
 	if err != nil {
 		return nil, err
 	}
 
-	removeFn, err := removeFn(iso, uncachedClient)
-	if err != nil {
-		return nil, err
-	}
-
+	removeFn := removeFn(iso, uncachedClient)
 	err = global.Set("__remove", removeFn, v8go.ReadOnly)
 	if err != nil {
 		return nil, err
@@ -193,12 +134,8 @@ func NewVM(cachedClient cache2.Cache, uncachedClient clientpkg.Client, log LogFu
 }
 
 func NewContext(isolate *v8go.Isolate, global *v8go.ObjectTemplate) (*v8go.Context, error) {
-	ctx, err := v8go.NewContext(isolate, global)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = (&vm{
+	ctx := v8go.NewContext(isolate, global)
+	_, err := (&vm{
 		isolate: isolate,
 		global:  global,
 		context: ctx,
@@ -337,7 +274,7 @@ func (v *vm) runScript(script string, origin string) (val *v8go.Value, err error
 	return val, err
 }
 
-func sleepFn(iso *v8go.Isolate) (*v8go.FunctionTemplate, error) {
+func sleepFn(iso *v8go.Isolate) *v8go.FunctionTemplate {
 	return v8go.NewFunctionTemplate(iso, func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		if len(info.Args()) != 1 {
 			return nil
@@ -358,7 +295,7 @@ func sleepFn(iso *v8go.Isolate) (*v8go.FunctionTemplate, error) {
 	})
 }
 
-func btoaFn(iso *v8go.Isolate) (*v8go.FunctionTemplate, error) {
+func btoaFn(iso *v8go.Isolate) *v8go.FunctionTemplate {
 	return v8go.NewFunctionTemplate(iso, func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		if len(info.Args()) != 1 {
 			return nil
@@ -378,7 +315,7 @@ func btoaFn(iso *v8go.Isolate) (*v8go.FunctionTemplate, error) {
 	})
 }
 
-func atobFn(iso *v8go.Isolate) (*v8go.FunctionTemplate, error) {
+func atobFn(iso *v8go.Isolate) *v8go.FunctionTemplate {
 	return v8go.NewFunctionTemplate(iso, func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		if len(info.Args()) != 1 {
 			return nil
@@ -403,7 +340,7 @@ func atobFn(iso *v8go.Isolate) (*v8go.FunctionTemplate, error) {
 	})
 }
 
-func listFn(iso *v8go.Isolate, cachedClient clientpkg.Reader, uncachedClient clientpkg.Client) (*v8go.FunctionTemplate, error) {
+func listFn(iso *v8go.Isolate, cachedClient clientpkg.Reader, uncachedClient clientpkg.Client) *v8go.FunctionTemplate {
 	return v8go.NewFunctionTemplate(iso, func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		if len(info.Args()) != 3 && len(info.Args()) != 2 {
 			return jsonResponse(info.Context(), &ListResponse{
@@ -538,7 +475,7 @@ type ListResponse struct {
 	List []runtime.Object `json:"list,omitempty"`
 }
 
-func getFn(iso *v8go.Isolate, cachedClient clientpkg.Reader, uncachedClient clientpkg.Client) (*v8go.FunctionTemplate, error) {
+func getFn(iso *v8go.Isolate, cachedClient clientpkg.Reader, uncachedClient clientpkg.Client) *v8go.FunctionTemplate {
 	return v8go.NewFunctionTemplate(iso, func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		if len(info.Args()) != 3 && len(info.Args()) != 4 {
 			return jsonResponse(info.Context(), &GetResponse{
@@ -621,14 +558,14 @@ func getFn(iso *v8go.Isolate, cachedClient clientpkg.Reader, uncachedClient clie
 	})
 }
 
-func exitFn(iso *v8go.Isolate) (*v8go.FunctionTemplate, error) {
+func exitFn(iso *v8go.Isolate) *v8go.FunctionTemplate {
 	return v8go.NewFunctionTemplate(iso, func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		iso.TerminateExecution()
 		return nil
 	})
 }
 
-func printFn(iso *v8go.Isolate, log LogFunc) (*v8go.FunctionTemplate, error) {
+func printFn(iso *v8go.Isolate, log LogFunc) *v8go.FunctionTemplate {
 	return v8go.NewFunctionTemplate(iso, func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		origin, err := info.Context().Global().Get("__policy")
 		if err != nil {
@@ -652,7 +589,7 @@ func printFn(iso *v8go.Isolate, log LogFunc) (*v8go.FunctionTemplate, error) {
 	})
 }
 
-func fetchFn(iso *v8go.Isolate) (*v8go.FunctionTemplate, error) {
+func fetchFn(iso *v8go.Isolate) *v8go.FunctionTemplate {
 	return v8go.NewFunctionTemplate(iso, func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		args := info.Args()
 		if len(args) == 0 {
@@ -775,7 +712,7 @@ type FetchResponse struct {
 	StatusText string            `json:"statusText,omitempty"`
 }
 
-func envFn(iso *v8go.Isolate) (*v8go.FunctionTemplate, error) {
+func envFn(iso *v8go.Isolate) *v8go.FunctionTemplate {
 	return v8go.NewFunctionTemplate(iso, func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		if len(info.Args()) != 1 {
 			return nil
@@ -795,7 +732,7 @@ func envFn(iso *v8go.Isolate) (*v8go.FunctionTemplate, error) {
 	})
 }
 
-func readFileFn(iso *v8go.Isolate) (*v8go.FunctionTemplate, error) {
+func readFileFn(iso *v8go.Isolate) *v8go.FunctionTemplate {
 	return v8go.NewFunctionTemplate(iso, func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		if len(info.Args()) != 1 {
 			return nil
@@ -830,7 +767,7 @@ type ResourceResponse struct {
 	Message string `json:"message,omitempty"`
 }
 
-func createFn(iso *v8go.Isolate, uncachedClient clientpkg.Client) (*v8go.FunctionTemplate, error) {
+func createFn(iso *v8go.Isolate, uncachedClient clientpkg.Client) *v8go.FunctionTemplate {
 	return v8go.NewFunctionTemplate(iso, func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		if len(info.Args()) != 1 {
 			return jsonResponse(info.Context(), &ResourceResponse{
@@ -877,7 +814,7 @@ func createFn(iso *v8go.Isolate, uncachedClient clientpkg.Client) (*v8go.Functio
 	})
 }
 
-func updateFn(iso *v8go.Isolate, uncachedClient clientpkg.Client) (*v8go.FunctionTemplate, error) {
+func updateFn(iso *v8go.Isolate, uncachedClient clientpkg.Client) *v8go.FunctionTemplate {
 	return v8go.NewFunctionTemplate(iso, func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		if len(info.Args()) != 1 {
 			return jsonResponse(info.Context(), &ResourceResponse{
@@ -940,7 +877,7 @@ func jsonResponse(ctx *v8go.Context, value interface{}) *v8go.Value {
 	return response
 }
 
-func removeFn(iso *v8go.Isolate, uncachedClient clientpkg.Client) (*v8go.FunctionTemplate, error) {
+func removeFn(iso *v8go.Isolate, uncachedClient clientpkg.Client) *v8go.FunctionTemplate {
 	return v8go.NewFunctionTemplate(iso, func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		if len(info.Args()) != 1 {
 			return jsonResponse(info.Context(), &ResourceResponse{

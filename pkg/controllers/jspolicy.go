@@ -65,7 +65,7 @@ type backgroundHashObj struct {
 
 // Reconcile reads that state of the cluster for an Account object and makes changes based on the state read
 func (r *JsPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := loghelper.NewFromExisting(r.Log, req.Name)
+	log := loghelper.NewFromExisting(r.Log.Base(), req.Name)
 	log.Debugf("reconcile started")
 
 	// Retrieve webhook config

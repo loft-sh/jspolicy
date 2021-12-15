@@ -7,7 +7,7 @@ images:
     image: ${IMAGE}
     rebuildStrategy: ignoreContextChanges
     build:
-      docker:
+      buildKit:
         skipPush: true
         options:
           target: builder
