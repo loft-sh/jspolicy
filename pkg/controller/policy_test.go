@@ -63,6 +63,7 @@ func (f *fakeQueue) Get() (item interface{}, shutdown bool) {
 func (f *fakeQueue) Done(item interface{})                             {}
 func (f *fakeQueue) ShutDown()                                         {}
 func (f *fakeQueue) ShuttingDown() bool                                { return false }
+func (f *fakeQueue) ShutDownWithDrain()                                {}
 func (f *fakeQueue) AddAfter(item interface{}, duration time.Duration) { f.Add(item) }
 func (f *fakeQueue) AddRateLimited(item interface{})                   { f.Add(item) }
 func (f *fakeQueue) Forget(item interface{})                           {}

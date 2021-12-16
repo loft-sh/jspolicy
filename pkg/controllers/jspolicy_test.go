@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	policyv1beta1 "github.com/loft-sh/jspolicy/pkg/apis/policy/v1beta1"
+	"github.com/loft-sh/jspolicy/pkg/util/conditions"
 	"github.com/loft-sh/jspolicy/pkg/util/loghelper"
 	"github.com/loft-sh/jspolicy/pkg/util/testing"
 	"gotest.tools/assert"
@@ -126,9 +127,9 @@ func TestCompile(t *testing2.T) {
 
 	// create a bundle
 	fakeBundler.bundle = []byte("test")
-	status, err := controller.compileBundle(context.TODO(), testPolicy, nil, "123", controller.Log)
+	err := controller.compileBundle(context.TODO(), testPolicy, nil, "123", controller.Log)
 	assert.NilError(t, err)
-	assert.Equal(t, status.Phase, policyv1beta1.WebhookPhaseSynced)
+	assert.Equal(t, conditions.IsTrue(testPolicy, policyv1beta1.BundleCompiledCondition), true)
 
 	bundles := &policyv1beta1.JsPolicyBundleList{}
 	err = controller.Client.List(context.TODO(), bundles)
@@ -140,9 +141,9 @@ func TestCompile(t *testing2.T) {
 	// update a bundle
 	controller.Client = fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(testPolicy, testPolicyBundle).Build()
 	fakeBundler.bundle = []byte("test123")
-	status, err = controller.compileBundle(context.TODO(), testPolicy, testPolicyBundle, "123", controller.Log)
+	err = controller.compileBundle(context.TODO(), testPolicy, testPolicyBundle, "123", controller.Log)
 	assert.NilError(t, err)
-	assert.Equal(t, status.Phase, policyv1beta1.WebhookPhaseSynced)
+	assert.Equal(t, conditions.IsTrue(testPolicy, policyv1beta1.BundleCompiledCondition), true)
 
 	bundles = &policyv1beta1.JsPolicyBundleList{}
 	err = controller.Client.List(context.TODO(), bundles)
@@ -154,9 +155,9 @@ func TestCompile(t *testing2.T) {
 	// compile failed
 	controller.Client = fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(testPolicy).Build()
 	fakeBundler.err = errors.New("compile failed")
-	status, err = controller.compileBundle(context.TODO(), testPolicy, nil, "123", controller.Log)
+	err = controller.compileBundle(context.TODO(), testPolicy, nil, "123", controller.Log)
 	assert.NilError(t, err)
-	assert.Equal(t, status.Phase, policyv1beta1.WebhookPhaseFailed)
+	assert.Equal(t, conditions.IsFalse(testPolicy, policyv1beta1.BundleCompiledCondition), true)
 
 	bundles = &policyv1beta1.JsPolicyBundleList{}
 	err = controller.Client.List(context.TODO(), bundles)
@@ -166,9 +167,9 @@ func TestCompile(t *testing2.T) {
 	// compile failed update
 	controller.Client = fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(testPolicy, testPolicyBundle).Build()
 	fakeBundler.err = errors.New("compile failed")
-	status, err = controller.compileBundle(context.TODO(), testPolicy, testPolicyBundle, "123", controller.Log)
+	err = controller.compileBundle(context.TODO(), testPolicy, testPolicyBundle, "123", controller.Log)
 	assert.NilError(t, err)
-	assert.Equal(t, status.Phase, policyv1beta1.WebhookPhaseFailed)
+	assert.Equal(t, conditions.IsFalse(testPolicy, policyv1beta1.BundleCompiledCondition), true)
 
 	bundles = &policyv1beta1.JsPolicyBundleList{}
 	err = controller.Client.List(context.TODO(), bundles)
@@ -177,9 +178,9 @@ func TestCompile(t *testing2.T) {
 
 	// bundle missing
 	controller.Client = fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(testPolicy).Build()
-	status, err = controller.compileBundle(context.TODO(), testPolicy, nil, "", controller.Log)
+	err = controller.compileBundle(context.TODO(), testPolicy, nil, "", controller.Log)
 	assert.NilError(t, err)
-	assert.Equal(t, status.Phase, policyv1beta1.WebhookPhaseFailed)
+	assert.Equal(t, conditions.IsFalse(testPolicy, policyv1beta1.BundleCompiledCondition), true)
 
 	// bundle not missing anymore
 	controller.Client = fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(testPolicy).Build()
@@ -188,7 +189,7 @@ func TestCompile(t *testing2.T) {
 		Phase:  policyv1beta1.WebhookPhaseFailed,
 		Reason: "BundleJavascript",
 	}
-	status, err = controller.compileBundle(context.TODO(), newTestPolicy, testPolicyBundle, "", controller.Log)
+	err = controller.compileBundle(context.TODO(), newTestPolicy, testPolicyBundle, "", controller.Log)
 	assert.NilError(t, err)
-	assert.Equal(t, status.Phase, policyv1beta1.WebhookPhaseSynced)
+	assert.Equal(t, conditions.IsTrue(newTestPolicy, policyv1beta1.BundleCompiledCondition), true)
 }
