@@ -66,8 +66,6 @@ kubectl create deployment nginx-deployment -n default --image=nginx
 Thank you for your interest in contributing! Please refer to
 [CONTRIBUTING.md](https://github.com/loft-sh/jspolicy/blob/main/CONTRIBUTING.md) for guidance.
 
-<br>
-
 ---
 
 This project is open-source and licensed under Apache 2.0, so you can use it in any private or commercial projects.
