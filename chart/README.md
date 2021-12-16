@@ -1,6 +1,3 @@
-![jsPolicy Compatibility](https://raw.githubusercontent.com/loft-sh/jspolicy/main/docs/static/media/jspolicy-logo-dark.svg)
-  
-
 ### **[Website](https://www.jspolicy.com)** • **[Getting Started Guide](https://www.jspolicy.com/docs/getting-started/installation)** • **[Documentation](https://www.jspolicy.com/docs/why-jspolicy)** • **[Blog](https://loft.sh/blog)** • **[Twitter](https://twitter.com/loft_sh)** • **[Slack](https://slack.loft.sh/)**
 
 ### jsPolicy - Easier & Faster Kubernetes Policies using JavaScript or TypeScript
@@ -17,24 +14,12 @@
 - **Huge Ecosystem of Libraries** - Use any CommonJS JavaScript or TypeScript library from npmjs or from your private registry
 - **Easy Policy Sharing & Reuse** - Share entire policies or reusable functions via npmjs or via your private registry
 - **Efficient Policy Development** - Use any of the dev tools available in JavaScript or TypeScript for a highly efficient workflow
-
-
-Learn more on [www.jspolicy.com](https://www.jspolicy.com).
   
 
 [![Join us on Slack!](https://raw.githubusercontent.com/loft-sh/jspolicy/main/docs/static/media/slack.svg)](https://slack.loft.sh/)
 
-  
-
-## Architecture
-[![jsPolicy Architecture](https://raw.githubusercontent.com/loft-sh/jspolicy/main/docs/static/media/diagrams/jspolicy-architecture.svg)](https://www.jspolicy.com)
-
-![jsPolicy Compatibility](https://raw.githubusercontent.com/loft-sh/jspolicy/main/docs/static/media/cluster-compatibility.png)
-
 
 Learn more in the [documentation](https://www.jspolicy.com/docs/why-jspolicy).
-  
-⭐️ **Do you like jsPolicy? Support the project with a star** ⭐️
   
 ## Quick Start
 To learn more about jspolicy, [**open the full getting started guide**](https://www.jspolicy.com/docs/getting-started/installation).
