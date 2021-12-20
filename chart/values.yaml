@@ -44,7 +44,7 @@ fullnameOverride: ""
 service:
   type: ClusterIP
   port: 443
-  targetPort: 443
+  targetPort: 8443
   
 webhook:
   create: true
@@ -57,6 +57,15 @@ serviceMonitor:
   interval: 60s
   scrapeTimeout: 30s
   labels: {}
+  
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - all
+  runAsUser: 1000
+  runAsGroup: 1000
+  runAsNonRoot: true
   
 # Create policies as part of the chart
 # policies is a map:

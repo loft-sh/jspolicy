@@ -44,6 +44,8 @@ spec:
         image: "loftsh/jspolicy:{{ .Chart.Version }}"
         {{- end }}
         name: jspolicy
+        securityContext:
+{{ toYaml .Values.securityContext | indent 10 }}
         env:
           {{- range $key, $value := .Values.env }}
           - name: {{ $key | quote }}

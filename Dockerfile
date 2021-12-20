@@ -27,14 +27,20 @@ RUN npm install -g webpack-cli
 # Build jspolicy
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} GO111MODULE=on go build -mod vendor -o jspolicy cmd/jspolicy/main.go
 
-FROM node:16
+FROM node:16-slim
 
 # Prepare pod
 RUN npm install -g webpack-cli
 
 WORKDIR /
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /workspace/jspolicy /jspolicy
+
+COPY --from=builder --chown=node:node /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder --chown=node:node /workspace/jspolicy /jspolicy
+
+RUN chown -R node:node /tmp /usr/local/lib/node_modules
+
+# Change to non-root privilege
+USER node
 
 ENTRYPOINT ["/jspolicy"]
 CMD []

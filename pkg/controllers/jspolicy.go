@@ -7,11 +7,13 @@ import (
 	"github.com/loft-sh/jspolicy/pkg/bundle"
 	"github.com/loft-sh/jspolicy/pkg/constants"
 	"github.com/loft-sh/jspolicy/pkg/controller"
+	"github.com/loft-sh/jspolicy/pkg/util/apply"
 	"github.com/loft-sh/jspolicy/pkg/util/clienthelper"
 	"github.com/loft-sh/jspolicy/pkg/util/conditions"
 	"github.com/loft-sh/jspolicy/pkg/util/hash"
 	"github.com/loft-sh/jspolicy/pkg/util/loghelper"
 	"github.com/loft-sh/jspolicy/pkg/util/patch"
+	"github.com/loft-sh/jspolicy/pkg/util/random"
 	"github.com/pkg/errors"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,6 +44,7 @@ var (
 	all        = admissionregistrationv1.AllScopes
 	equivalent = admissionregistrationv1.Equivalent
 	fail       = admissionregistrationv1.Fail
+	t          = true
 )
 
 func init() {
@@ -500,14 +503,35 @@ func (r *JsPolicyReconciler) syncWebhook(ctx context.Context, jsPolicy *policyv1
 	return nil
 }
 
-func (r *JsPolicyReconciler) syncMutatingWebhookConfiguration(ctx context.Context, jsPolicy *policyv1beta1.JsPolicy, webhook *admissionregistrationv1.MutatingWebhookConfiguration) error {
+func (r *JsPolicyReconciler) syncMutatingWebhookConfiguration(ctx context.Context, jsPolicy *policyv1beta1.JsPolicy, originalWebhook *admissionregistrationv1.MutatingWebhookConfiguration) error {
 	namespace, err := clienthelper.CurrentNamespace()
 	if err != nil {
 		return err
 	}
 
 	// copy the webhook
-	originalWebhook := webhook.DeepCopy()
+	webhook := &admissionregistrationv1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: jsPolicy.Annotations,
+			Labels:      jsPolicy.Labels,
+		},
+	}
+	if originalWebhook != nil && originalWebhook.Name != "" {
+		webhook.Name = originalWebhook.Name
+	} else {
+		webhook.Name = jsPolicy.Name + "-" + random.RandomString(5)
+	}
+
+	// set owner reference
+	webhook.OwnerReferences = []metav1.OwnerReference{
+		{
+			APIVersion: policyv1beta1.SchemeGroupVersion.String(),
+			Kind:       "JsPolicy",
+			Name:       jsPolicy.Name,
+			UID:        jsPolicy.UID,
+			Controller: &t,
+		},
+	}
 
 	// should reset webhook?
 	if len(webhook.Webhooks) != 1 {
@@ -550,14 +574,7 @@ func (r *JsPolicyReconciler) syncMutatingWebhookConfiguration(ctx context.Contex
 	}
 	webhook.Webhooks[0].NamespaceSelector = jsPolicy.Spec.NamespaceSelector
 	if webhook.Webhooks[0].NamespaceSelector == nil {
-		webhook.Webhooks[0].NamespaceSelector = &metav1.LabelSelector{
-			MatchExpressions: []metav1.LabelSelectorRequirement{
-				{
-					Key:      "control-plane",
-					Operator: metav1.LabelSelectorOpDoesNotExist,
-				},
-			},
-		}
+		webhook.Webhooks[0].NamespaceSelector = &metav1.LabelSelector{}
 	}
 	webhook.Webhooks[0].ObjectSelector = jsPolicy.Spec.ObjectSelector
 	if webhook.Webhooks[0].ObjectSelector == nil {
@@ -581,35 +598,38 @@ func (r *JsPolicyReconciler) syncMutatingWebhookConfiguration(ctx context.Contex
 		webhook.Webhooks[0].AdmissionReviewVersions = []string{"v1"}
 	}
 
-	// check if create
-	if webhook.Name == "" {
-		webhook.GenerateName = jsPolicy.Name + "-"
-		r.Log.Infof("Create mutating webhook %s", jsPolicy.Name)
-		return clienthelper.CreateWithOwner(ctx, r.Client, webhook, jsPolicy, r.Scheme)
-	}
-
-	// we only update if there was really a change
-	mergePatch := client.MergeFrom(originalWebhook)
-	mergeData, err := mergePatch.Data(webhook)
-	if err != nil {
-		return err
-	} else if string(mergeData) == "{}" {
-		return nil
-	}
-
-	// update the webhook
-	r.Log.Infof("Patching mutating webhook %s with %s", webhook.Name, string(mergeData))
-	return r.Patch(ctx, webhook, mergePatch)
+	return apply.Apply(ctx, r.Client, webhook, true)
 }
 
-func (r *JsPolicyReconciler) syncValidatingWebhookConfiguration(ctx context.Context, jsPolicy *policyv1beta1.JsPolicy, webhook *admissionregistrationv1.ValidatingWebhookConfiguration) error {
+func (r *JsPolicyReconciler) syncValidatingWebhookConfiguration(ctx context.Context, jsPolicy *policyv1beta1.JsPolicy, originalWebhook *admissionregistrationv1.ValidatingWebhookConfiguration) error {
 	namespace, err := clienthelper.CurrentNamespace()
 	if err != nil {
 		return err
 	}
 
 	// copy the webhook
-	originalWebhook := webhook.DeepCopy()
+	webhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: jsPolicy.Annotations,
+			Labels:      jsPolicy.Labels,
+		},
+	}
+	if originalWebhook != nil && originalWebhook.Name != "" {
+		webhook.Name = originalWebhook.Name
+	} else {
+		webhook.Name = jsPolicy.Name + "-" + random.RandomString(5)
+	}
+
+	// set owner reference
+	webhook.OwnerReferences = []metav1.OwnerReference{
+		{
+			APIVersion: policyv1beta1.SchemeGroupVersion.String(),
+			Kind:       "JsPolicy",
+			Name:       jsPolicy.Name,
+			UID:        jsPolicy.UID,
+			Controller: &t,
+		},
+	}
 
 	// should reset webhook?
 	if len(webhook.Webhooks) != 1 {
@@ -652,14 +672,7 @@ func (r *JsPolicyReconciler) syncValidatingWebhookConfiguration(ctx context.Cont
 	}
 	webhook.Webhooks[0].NamespaceSelector = jsPolicy.Spec.NamespaceSelector
 	if webhook.Webhooks[0].NamespaceSelector == nil {
-		webhook.Webhooks[0].NamespaceSelector = &metav1.LabelSelector{
-			MatchExpressions: []metav1.LabelSelectorRequirement{
-				{
-					Key:      "control-plane",
-					Operator: metav1.LabelSelectorOpDoesNotExist,
-				},
-			},
-		}
+		webhook.Webhooks[0].NamespaceSelector = &metav1.LabelSelector{}
 	}
 	webhook.Webhooks[0].ObjectSelector = jsPolicy.Spec.ObjectSelector
 	if webhook.Webhooks[0].ObjectSelector == nil {
@@ -680,25 +693,7 @@ func (r *JsPolicyReconciler) syncValidatingWebhookConfiguration(ctx context.Cont
 		webhook.Webhooks[0].AdmissionReviewVersions = []string{"v1"}
 	}
 
-	// check if create
-	if webhook.Name == "" {
-		webhook.GenerateName = jsPolicy.Name + "-"
-		r.Log.Infof("Create validating webhook %s", jsPolicy.Name)
-		return clienthelper.CreateWithOwner(ctx, r.Client, webhook, jsPolicy, r.Scheme)
-	}
-
-	// we only update if there was really a change
-	mergePatch := client.MergeFrom(originalWebhook)
-	mergeData, err := mergePatch.Data(webhook)
-	if err != nil {
-		return err
-	} else if string(mergeData) == "{}" {
-		return nil
-	}
-
-	// update the webhook
-	r.Log.Infof("Patching validating webhook %s with %s", webhook.Name, string(mergeData))
-	return r.Patch(ctx, webhook, mergePatch)
+	return apply.Apply(ctx, r.Client, webhook, true)
 }
 
 // SetupWithManager adds the controller to the manager
