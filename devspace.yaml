@@ -27,6 +27,8 @@ dev:
         - op: remove
           path: spec.containers[0].readinessProbe
         - op: remove
+          path: spec.containers[0].securityContext
+        - op: remove
           path: spec.containers[0].livenessProbe
         - op: replace
           path: spec.containers[0].command

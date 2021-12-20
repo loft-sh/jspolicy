@@ -138,7 +138,7 @@ func main() {
 		MetricsBindAddress: ":8080",
 		CertDir:            certhelper.WebhookCertFolder,
 		LeaderElection:     false,
-		Port:               443,
+		Port:               8443,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
