@@ -28,7 +28,7 @@ spec:
       containers:
       - ports:
         - name: webhook
-          containerPort: 443
+          containerPort: {{ .Values.service.targetPort }}
           protocol: TCP
         command:
         {{- range $f := .Values.jspolicy.command }}
