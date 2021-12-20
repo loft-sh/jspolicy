@@ -216,7 +216,7 @@ func main() {
 		handler := http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {})
 
 		// listen and serve
-		_ = http.ListenAndServe(":80", handler)
+		_ = http.ListenAndServe(":9080", handler)
 	}()
 
 	// start leader election for controllers
