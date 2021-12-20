@@ -55,13 +55,13 @@ func writeCert(folder string, cert []byte, key interface{}) error {
 	}
 
 	// tls.crt
-	err = ioutil.WriteFile(filepath.Join(folder, "tls.crt"), out.Bytes(), 066)
+	err = ioutil.WriteFile(filepath.Join(folder, "tls.crt"), out.Bytes(), 0666)
 	if err != nil {
 		return err
 	}
 
 	// ca.crt
-	err = ioutil.WriteFile(filepath.Join(folder, "ca.crt"), out.Bytes(), 066)
+	err = ioutil.WriteFile(filepath.Join(folder, "ca.crt"), out.Bytes(), 0666)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func writeCert(folder string, cert []byte, key interface{}) error {
 	}
 
 	// tls.key
-	err = ioutil.WriteFile(filepath.Join(folder, "tls.key"), out.Bytes(), 066)
+	err = ioutil.WriteFile(filepath.Join(folder, "tls.key"), out.Bytes(), 0666)
 	if err != nil {
 		return err
 	}
@@ -87,8 +87,6 @@ func generateCertificate(folder string, service string) error {
 	_, err := os.Stat(filepath.Join(folder, "tls.key"))
 	if err == nil {
 		return nil
-	} else if os.IsNotExist(err) == false {
-		return err
 	}
 
 	priv, err := rsa.GenerateKey(rand.Reader, 4096)

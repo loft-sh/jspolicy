@@ -9,6 +9,9 @@ WORKDIR /workspace
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
 
+# Prepare pod
+RUN npm install -g webpack-cli
+
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
@@ -20,9 +23,6 @@ COPY pkg/ pkg/
 
 ENV GO111MODULE on
 ENV DEBUG true
-
-# Prepare pod
-RUN npm install -g webpack-cli
 
 # Build jspolicy
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} GO111MODULE=on go build -mod vendor -o jspolicy cmd/jspolicy/main.go
