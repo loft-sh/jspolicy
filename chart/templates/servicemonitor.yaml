@@ -16,7 +16,7 @@ metadata:
 {{- end }}
 spec:
   endpoints:
-    - targetPort: 8080
+    - port: metrics
       path: {{ .Values.serviceMonitor.path }}
       interval: {{ .Values.serviceMonitor.interval }}
       scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeout }}
