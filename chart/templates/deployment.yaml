@@ -22,9 +22,18 @@ spec:
     spec:
       terminationGracePeriodSeconds: 10
       serviceAccountName: {{ template "jspolicy.serviceAccountName" . }}
-    {{- if .Values.imagePullSecrets }}
+      {{- if .Values.imagePullSecrets }}
       imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 8 }}
-    {{- end }}
+      {{- end }}
+      {{- if .Values.affinity }}
+      affinity: {{- include "jspolicy.render" ( dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- include "jspolicy.render" ( dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "jspolicy.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
+      {{- end }}
       containers:
       - ports:
         - name: webhook

@@ -66,7 +66,27 @@ securityContext:
   runAsUser: 1000
   runAsGroup: 1000
   runAsNonRoot: true
-  
+
+##  Affinity for pods assignment
+## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+##
+affinity: {}
+## Node labels for pods assignment
+## ref: https://kubernetes.io/docs/user-guide/node-selection/
+##
+nodeSelector: {}
+## Tolerations for pods assignment
+## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+##
+tolerations: []
+
+podDisruptionBudget:
+  ## Specifies whether a Pod disruption budget should be created
+  ##
+  create: false
+  minAvailable: 1
+  # maxUnavailable: 1
+
 # Create policies as part of the chart
 # policies is a map:
 #   the key is the name of the policy
