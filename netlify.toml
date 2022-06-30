@@ -1,20 +1,11 @@
 [build]
   base = "docs/"
-  publish = "build/"
+  publish = "public/"
   command = """
     set -e
     
-    export OUT_DIR="build/"
-    export TARGET_OUT_DIR="build/docs"
-    
-    # Build docs
     yarn build
-    
-    # Move files to build/docs/
-    mkdir -p tmp-$TARGET_OUT_DIR
-    mv $OUT_DIR/* tmp-$TARGET_OUT_DIR
-    mkdir -p $TARGET_OUT_DIR
-    mv tmp-$TARGET_OUT_DIR/* $TARGET_OUT_DIR
+    mv build/ public/docs/
   """
 
 [build.processing]
