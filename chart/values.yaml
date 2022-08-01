@@ -21,6 +21,27 @@ jspolicy:
   command: 
   - /jspolicy
   args: []
+
+  # Extra Labels to attach to server deployment. This should be a YAML map.
+  extraLabels: null
+  # Example:
+  #
+  # ```yaml
+  # extraLabels:
+  #   labelKey: label-value
+  #   anotherLabelKey: another-label-value
+  # ```
+
+  # Extra Pod Labels to attach to server pods. This should be a YAML map.
+  podLabels: null
+  # Example:
+  #
+  # ```yaml
+  # podLabels:
+  #   labelKey: label-value
+  #   anotherLabelKey: another-label-value
+  # ```
+
   resources:
     limits:
       memory: 1024Mi
