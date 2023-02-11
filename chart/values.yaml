@@ -67,7 +67,7 @@ securityContext:
   runAsGroup: 1000
   runAsNonRoot: true
 
-priorityClassName: system-cluster-critical
+priorityClassName: ""
 
 ##  Affinity for pods assignment
 ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
