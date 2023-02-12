@@ -8,7 +8,7 @@
     "license": "MIT",
     "devDependencies": {
         "@jspolicy/types": "^0.0.4",
-        "@kubernetes/client-node": "^0.14.3",
+        "@kubernetes/client-node": "^0.18.1",
         "@types/jest": "^26.0.23",
         "jest": "^26.0.23",
         "ts-jest": "^26.0.23",
