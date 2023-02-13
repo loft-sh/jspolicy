@@ -20,6 +20,7 @@ spec:
         app: {{ template "jspolicy.fullname" . }}
         release: {{ .Release.Name }}
     spec:
+      priorityClassName: {{ .Values.priorityClassName }}
       terminationGracePeriodSeconds: 10
       serviceAccountName: {{ template "jspolicy.serviceAccountName" . }}
       {{- if .Values.imagePullSecrets }}
