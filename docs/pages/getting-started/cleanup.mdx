@@ -28,6 +28,7 @@ Some CRDs may still be in place which may cause clusters to fail to respond to A
 ```bash
 kubectl api-resources --api-group='policy.jspolicy.com' -o name | xargs kubectl delete crd
 ```
+:::
 
 :::warning Data Loss
 Deleting the jsPolicy CRDs will also remove all jsPolicy objects inside your cluster, i.e. all `JsPolicy`, `JsPolicyBundle`, and `JsPolicyViolations` objects.
