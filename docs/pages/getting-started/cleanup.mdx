@@ -23,8 +23,8 @@ kubectl delete validatingwebhookconfiguration jspolicy
 ```
 :::
 
-
-## Delete CRDs (optional)
+:::caution Delete CRDs
+Some CRDs may still be in place which may cause clusters to fail to respond to API requests due to the failing webhook. In such case you may need to delete the resources:
 ```bash
 kubectl api-resources --api-group='policy.jspolicy.com' -o name | xargs kubectl delete crd
 ```
