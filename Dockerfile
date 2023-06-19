@@ -1,7 +1,7 @@
 # Build the manager binary
-FROM node:16 as builder
+FROM node:20 as builder
 
-COPY --from=golang:1.17 /usr/local/go/ /usr/local/go/
+COPY --from=golang:1.20 /usr/local/go/ /usr/local/go/
  
 ENV PATH="/usr/local/go/bin:${PATH}"
 
@@ -15,19 +15,16 @@ RUN npm install -g webpack-cli
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
-COPY vendor/ vendor/
+RUN go mod download -x
 
 # Copy the go source
 COPY cmd/ cmd/
 COPY pkg/ pkg/
 
-ENV GO111MODULE on
-ENV DEBUG true
-
 # Build jspolicy
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} GO111MODULE=on go build -mod vendor -o jspolicy cmd/jspolicy/main.go
+RUN go build -o jspolicy cmd/jspolicy/main.go
 
-FROM node:16-slim
+FROM node:20-slim
 
 # Prepare pod
 RUN npm install -g webpack-cli
@@ -43,4 +40,3 @@ RUN chown -R node:node /tmp /usr/local/lib/node_modules
 USER node
 
 ENTRYPOINT ["/jspolicy"]
-CMD []

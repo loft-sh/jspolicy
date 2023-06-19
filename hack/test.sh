@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
 # Set required go flags
-export GO111MODULE=on
-export GOFLAGS=-mod=vendor
+# export GO111MODULE=on
+# export GOFLAGS=-mod=vendor
 
 # Test if we can build the program
 echo "Building js policy..."
-GOOS=linux GOARCH=amd64 go build cmd/jspolicy/main.go || exit 1
+go build cmd/jspolicy/main.go || exit 1
 
 # List packages
-PKGS=$(go list ./... | grep -v /vendor/ | grep -v /examples/ | grep -v /test/)
+PKGS=$(go list ./... | grep -v /examples/ | grep -v /test/)
 
 echo "Start testing..."
 fail=false

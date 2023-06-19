@@ -2,3 +2,8 @@
 .git/
 .devspace/
 /test
+
+# Compiled binary files:
+jspolicy
+main
+profile.out
