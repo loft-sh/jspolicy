@@ -106,12 +106,21 @@ nodeSelector: {}
 ##
 tolerations: []
 
+## Topology spread constrains
+## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/
+##
+topologySpreadConstraints: []
+
 podDisruptionBudget:
   ## Specifies whether a Pod disruption budget should be created
   ##
   create: false
   minAvailable: 1
   # maxUnavailable: 1
+
+  # Set apiversion for compatibility for kubernetes < 1.26
+  # default is policy/v1
+  apiVersion: null
 
 # Create policies as part of the chart
 # policies is a map:
