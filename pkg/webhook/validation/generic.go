@@ -158,6 +158,9 @@ func validateValidatingWebhook(name string, hook *policyv1beta1.JsPolicySpec, ol
 	if hook.FailurePolicy != nil && !supportedFailurePolicies.Has(string(*hook.FailurePolicy)) {
 		allErrors = append(allErrors, field.NotSupported(fldPath.Child("failurePolicy"), *hook.FailurePolicy, supportedFailurePolicies.List()))
 	}
+	if hook.ReinvocationPolicy != nil && !supportedReinvocationPolicies.Has(string(*hook.ReinvocationPolicy)) {
+		allErrors = append(allErrors, field.NotSupported(fldPath.Child("reinvocationPolicy"), *hook.ReinvocationPolicy, supportedReinvocationPolicies.List()))
+	}
 	if hook.MatchPolicy != nil && !supportedMatchPolicies.Has(string(*hook.MatchPolicy)) {
 		allErrors = append(allErrors, field.NotSupported(fldPath.Child("matchPolicy"), *hook.MatchPolicy, supportedMatchPolicies.List()))
 	}
@@ -248,6 +251,11 @@ var supportedOperations = sets.NewString(
 	string(admissionregistrationv1.Delete),
 	string(admissionregistrationv1.Update),
 	string(admissionregistrationv1.Connect),
+)
+
+var supportedReinvocationPolicies = sets.NewString(
+	string(admissionregistrationv1.NeverReinvocationPolicy),
+	string(admissionregistrationv1.IfNeededReinvocationPolicy),
 )
 
 func hasWildcardOperation(operations []admissionregistrationv1.OperationType) bool {

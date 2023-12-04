@@ -591,6 +591,7 @@ func (r *JsPolicyReconciler) syncMutatingWebhookConfiguration(ctx context.Contex
 	if webhook.Webhooks[0].SideEffects == nil {
 		webhook.Webhooks[0].SideEffects = &none
 	}
+	webhook.Webhooks[0].ReinvocationPolicy = jsPolicy.Spec.ReinvocationPolicy
 	if webhook.Webhooks[0].ReinvocationPolicy == nil {
 		webhook.Webhooks[0].ReinvocationPolicy = &never
 	}

@@ -66,6 +66,17 @@ type JsPolicySpec struct {
 	// +optional
 	Scope *admissionregistrationv1.ScopeType `json:"scope,omitempty" protobuf:"bytes,4,rep,name=scope"`
 
+	// To allow mutating admission plugins to observe changes made by other
+	// plugins, built-in mutating admission plugins are re-run if a mutating webhook
+	// modifies an object, and mutating webhooks can specify a
+	// reinvocationPolicy to control whether they are reinvoked as well.
+	// Allowed values are IfNeeded or Never. Defaults to Never.
+	// See
+	// https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#reinvocation-policy
+	// for more detailed information.
+	// +optional
+	ReinvocationPolicy *admissionregistrationv1.ReinvocationPolicyType `json:"reinvocationPolicy,omitempty" protobuf:"bytes,4,opt,name=reinvocationPolicy,casttype=reinvocationPolicyType"`
+
 	// FailurePolicy defines how unrecognized errors from the admission endpoint are handled -
 	// allowed values are Ignore or Fail. Defaults to Fail.
 	// +optional

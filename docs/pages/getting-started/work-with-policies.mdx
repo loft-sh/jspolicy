@@ -65,6 +65,7 @@ The following options may be configured to specify when a particular policy shou
 Within the `spec` of a `JsPolicy` object, you can also define certain settings that are relevant during the execution of a policy:
 - `violationPolicy`: `deny` (default) or `warn` (for testing) when the policy logic calls the `deny()` function
 - `failurePolicy`: `Fail` (default) or `Ignore` when jsPolicy fails to execute the policy or it aborts with a runtime error
+- `reinvocationPolicy`: [Reinvocation Policy](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#reinvocation-policy) defines whether JSPolicy is called again as part of the admission evaluation if the object being admitted is modified by other admission plugins after the initial webhook call (`IfNeeded`) or not (`Never`, *default*)
 - `auditPolicy`: `Log` (default) or `Skip` logging any policy violations (requests that lead to `deny()`) in the status of this policy
 - `auditLogSize`: Maximum number of violations that should be stored in the status of this policy (default: `10` violations)
 - `timeoutSeconds`: Maximum number of seconds that the execution of the policy logic may take before jsPolicy aborts the policy execution (default: `10` seconds, maximum is `30`)

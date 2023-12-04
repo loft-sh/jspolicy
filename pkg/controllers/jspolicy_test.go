@@ -38,6 +38,8 @@ var (
 		Spec: policyv1beta1.JsPolicyBundleSpec{},
 	}
 
+	ifNeeded = admissionregistrationv1.IfNeededReinvocationPolicy
+
 	mutatingTestPolicy = &policyv1beta1.JsPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test.test.com",
@@ -51,6 +53,7 @@ var (
 					"test": "test",
 				},
 			},
+			ReinvocationPolicy: &ifNeeded,
 		},
 	}
 )

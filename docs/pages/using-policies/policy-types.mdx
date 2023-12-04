@@ -20,6 +20,13 @@ Possible examples for mutating policies would be:
 
 Since mutating policies change the request's object, Kubernetes executes them sequentially, so that they do not interfere with each other.
 
+Policy can specify a [Reinvocation Policy](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#reinvocation-policy) to allow JSPolicy admission plugin to observe changes made by other admission plugins after the initial mutating webhook call.
+
+`reinvocationPolicy` in JSPolicy specification may be set to `Never` or `IfNeeded`. It defaults to `Never`.
+
+- `Never`: the policy webhook must not be called more than once in a single admission evaluation.
+- `IfNeeded`: the policy webhook may be called again as part of the admission evaluation if the object being admitted is modified by other admission plugins after the initial webhook call.
+
 ## `Validating`
 Validating policies are executed as part of `kubectl` requests after the execution of mutating policies. The objective of validating policies is to inspect the request and then to either deny or allow it. 
 
