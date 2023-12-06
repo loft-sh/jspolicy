@@ -20,6 +20,15 @@ func ServiceName() string {
 	return "jspolicy"
 }
 
+// WebhookURL returns the URL of the webhook service if it is set in the environment variable JS_POLICY_WEBHOOK_URL.
+// Otherwise, it returns an empty string which means a webhook service reference should be used.
+func WebhookURL() string {
+	if os.Getenv("JS_POLICY_WEBHOOK_URL") != "" {
+		return os.Getenv("JS_POLICY_WEBHOOK_URL")
+	}
+	return ""
+}
+
 func CurrentNamespace() (string, error) {
 	envNamespace := os.Getenv("KUBE_NAMESPACE")
 	if envNamespace != "" {

@@ -541,11 +541,16 @@ func (r *JsPolicyReconciler) syncMutatingWebhookConfiguration(ctx context.Contex
 	// Ensure webhook fields
 	webhook.Webhooks[0].Name = jsPolicy.Name
 	path := "/policy/" + jsPolicy.Name
-	webhook.Webhooks[0].ClientConfig.Service = &admissionregistrationv1.ServiceReference{
-		Name:      clienthelper.ServiceName(),
-		Namespace: namespace,
-		Path:      &path,
-		Port:      &port,
+	if url := clienthelper.WebhookURL(); url != "" {
+		url = url + path
+		webhook.Webhooks[0].ClientConfig.URL = &url
+	} else {
+		webhook.Webhooks[0].ClientConfig.Service = &admissionregistrationv1.ServiceReference{
+			Name:      clienthelper.ServiceName(),
+			Namespace: namespace,
+			Path:      &path,
+			Port:      &port,
+		}
 	}
 	webhook.Webhooks[0].ClientConfig.CABundle = r.CaBundle
 	if len(webhook.Webhooks[0].Rules) != 1 {
@@ -639,11 +644,16 @@ func (r *JsPolicyReconciler) syncValidatingWebhookConfiguration(ctx context.Cont
 	// Ensure webhook fields
 	webhook.Webhooks[0].Name = jsPolicy.Name
 	path := "/policy/" + jsPolicy.Name
-	webhook.Webhooks[0].ClientConfig.Service = &admissionregistrationv1.ServiceReference{
-		Name:      clienthelper.ServiceName(),
-		Namespace: namespace,
-		Path:      &path,
-		Port:      &port,
+	if url := clienthelper.WebhookURL(); url != "" {
+		url = url + path
+		webhook.Webhooks[0].ClientConfig.URL = &url
+	} else {
+		webhook.Webhooks[0].ClientConfig.Service = &admissionregistrationv1.ServiceReference{
+			Name:      clienthelper.ServiceName(),
+			Namespace: namespace,
+			Path:      &path,
+			Port:      &port,
+		}
 	}
 	webhook.Webhooks[0].ClientConfig.CABundle = r.CaBundle
 	if len(webhook.Webhooks[0].Rules) != 1 {
