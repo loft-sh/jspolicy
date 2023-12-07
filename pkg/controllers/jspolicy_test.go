@@ -81,6 +81,8 @@ func TestSimple(t *testing2.T) {
 	err = fakeClient.List(context.TODO(), list)
 	assert.NilError(t, err)
 	assert.Equal(t, len(list.Items), 1)
+	var expectedURL *string
+	assert.Equal(t, list.Items[0].Webhooks[0].ClientConfig.URL, expectedURL, "the webhook url should be nil when JS_POLICY_WEBHOOK_URL is not set")
 	mList := &admissionregistrationv1.MutatingWebhookConfigurationList{}
 	err = fakeClient.List(context.TODO(), mList)
 	assert.NilError(t, err)
@@ -103,6 +105,39 @@ func TestSimple(t *testing2.T) {
 	err = fakeClient.List(context.TODO(), mList)
 	assert.NilError(t, err)
 	assert.Equal(t, len(mList.Items), 1)
+}
+func TestSimpleURL(t *testing2.T) {
+	err := os.Setenv("KUBE_NAMESPACE", "default")
+	assert.NilError(t, err)
+	err = os.Setenv("JS_POLICY_WEBHOOK_URL", "https://testurl.example.local")
+	assert.NilError(t, err)
+
+	scheme := testing.NewScheme()
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(testPolicy).Build()
+
+	controller := &JsPolicyReconciler{
+		Client:                  fakeClient,
+		Log:                     loghelper.New("test"),
+		Scheme:                  scheme,
+		Bundler:                 nil,
+		ControllerPolicyManager: nil,
+		controllerPolicyHash:    map[string]string{},
+		CaBundle:                []byte("any"),
+	}
+
+	// sync the webhook
+	err = controller.syncWebhook(context.Background(), testPolicy)
+	assert.NilError(t, err)
+
+	// check if there was a validating webhook created
+	list := &admissionregistrationv1.ValidatingWebhookConfigurationList{}
+	err = fakeClient.List(context.TODO(), list)
+	assert.NilError(t, err)
+	assert.Equal(t, len(list.Items), 1)
+
+	// confirm that the webhook url is set correctly
+	expectedURL := "https://testurl.example.local" + "/policy/test.test.com"
+	assert.Equal(t, *list.Items[0].Webhooks[0].ClientConfig.URL, expectedURL)
 }
 
 type fakeBundler struct {

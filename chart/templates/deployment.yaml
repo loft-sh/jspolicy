@@ -35,6 +35,10 @@ spec:
       {{- if .Values.tolerations }}
       tolerations: {{- include "jspolicy.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
       {{- end }}
+      {{- if .Values.jspolicy.extraVolumes }}
+      volumes:
+        {{- toYaml .Values.jspolicy.extraVolumes | nindent 8 }}
+      {{- end }}
       containers:
       - ports:
         - name: webhook
@@ -89,3 +93,7 @@ spec:
         {{- end }}
         resources:
 {{ toYaml .Values.jspolicy.resources | indent 10 }}
+        {{- if .Values.jspolicy.extraVolumeMounts }}
+        volumeMounts:
+          {{- toYaml .Values.jspolicy.extraVolumeMounts | nindent 10 }}
+        {{- end }}

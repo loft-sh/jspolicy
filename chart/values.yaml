@@ -28,6 +28,9 @@ jspolicy:
     requests:
       memory: 128Mi
       cpu: 50m
+  # extraVolumes and extraVolumeMounts allows mounting other volumes to the jsPolicy pod.
+  extraVolumes: []
+  extraVolumeMounts: []
 
 policyReports:
   enabled: false
