@@ -30,13 +30,18 @@ func EnsureCertSecrets(ctx context.Context, client client.Client) error {
 		return err
 	}
 
-	// make sure the namespace exists
-	err = client.Create(ctx, &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace,
-		},
-	})
-	if err != nil && kerrors.IsAlreadyExists(err) == false {
+	// check that namespace exists
+	err = client.Get(ctx, types.NamespacedName{Name: namespace}, &corev1.Namespace{})
+
+	// only attempt to create namespace if it does not exist, as this can trigger admission webhooks
+	if kerrors.IsNotFound(err) {
+		err = client.Create(ctx, &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: namespace,
+			},
+		})
+	}
+	if err != nil {
 		return err
 	}
 
