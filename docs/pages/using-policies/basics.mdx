@@ -23,7 +23,7 @@ Policies are very powerful and can block/deny `kubectl` requests for example, so
 
 
 ## `JsPolicy` YAML files
-If someone shares a standalone `JsPolicy` object as a YAML file with you (or you created the file yourself), then you will likely find the `spec.javascript` field showing come JavaScript code embedded inside the YAML. Optionally, there may also be the `spec.dependencies` field filled with a list of `npm` packages that are used within this policy.
+If someone shares a standalone `JsPolicy` object as a YAML file with you (or you created the file yourself), then you will likely find the `spec.javascript` field showing some JavaScript code embedded inside the YAML. Optionally, there may also be the `spec.dependencies` field filled with a list of `npm` packages that are used within this policy.
 
 To apply such a policy in your cluster, simply create the `JsPolicy` object in your cluster:
 ```bash
