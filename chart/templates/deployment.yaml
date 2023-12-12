@@ -8,6 +8,9 @@ metadata:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
+    {{- if .Values.jspolicy.extraLabels }}
+      {{- toYaml .Values.jspolicy.extraLabels | nindent 4 }}
+    {{- end }}
 spec:
   selector:
     matchLabels:
@@ -19,6 +22,9 @@ spec:
       labels:
         app: {{ template "jspolicy.fullname" . }}
         release: {{ .Release.Name }}
+        {{- if .Values.jspolicy.podLabels }}
+          {{- toYaml .Values.jspolicy.podLabels | nindent 8 }}
+        {{- end }}
     spec:
       priorityClassName: {{ .Values.priorityClassName }}
       terminationGracePeriodSeconds: 10
