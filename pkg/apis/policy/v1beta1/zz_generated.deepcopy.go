@@ -253,6 +253,11 @@ func (in *JsPolicySpec) DeepCopyInto(out *JsPolicySpec) {
 		*out = new(v1.ScopeType)
 		**out = **in
 	}
+	if in.ReinvocationPolicy != nil {
+		in, out := &in.ReinvocationPolicy, &out.ReinvocationPolicy
+		*out = new(v1.ReinvocationPolicyType)
+		**out = **in
+	}
 	if in.FailurePolicy != nil {
 		in, out := &in.FailurePolicy, &out.FailurePolicy
 		*out = new(v1.FailurePolicyType)

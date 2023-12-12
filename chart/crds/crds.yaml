@@ -208,6 +208,13 @@ spec:
                   description: OperationType specifies an operation for a request.
                   type: string
                 type: array
+              reinvocationPolicy:
+                description: To allow mutating admission plugins to observe changes
+                  made by other plugins, built-in mutating admission plugins are re-run
+                  if a mutating webhook modifies an object, and mutating webhooks
+                  can specify a reinvocationPolicy to control whether they are reinvoked
+                  as well.
+                type: string
               resources:
                 description: "Resources is a list of resources this rule applies to.
                   \n For example: 'pods' means pods. 'pods/log' means the log subresource
