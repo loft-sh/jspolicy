@@ -1,0 +1,18 @@
+# This policy assigns the below labels to all new Namespaces
+# pod-security.kubernetes.io/enforce=baseline
+# pod-security.kubernetes.io/warn=restricted
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "Add-PSA-Labels-To-Namespace.example.com"
+spec:
+  type: Mutating
+  operations: ["CREATE"]
+  resources: ["namespaces"]
+  apiGroups: [""]
+  javascript: |
+    // print will print a message to jsPolicies pod log
+    print("Incoming request for: " + request.object.metadata.name)
+    request.object.metadata.labels = {...request.object.metadata.labels, 'pod-security.kubernetes.io/enforce': 'baseline', 'pod-security.kubernetes.io/warn': 'restricted' }
+    print("Namespace Labels: " + JSON.stringify(request.object.metadata.labels))
+    mutate(request.object);   
