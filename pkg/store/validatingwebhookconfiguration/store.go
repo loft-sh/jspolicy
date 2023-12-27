@@ -2,15 +2,16 @@ package validatingwebhookconfiguration
 
 import (
 	"context"
+	"io/ioutil"
+	"path/filepath"
+
 	policyv1beta1 "github.com/loft-sh/jspolicy/pkg/apis/policy/v1beta1"
 	"github.com/loft-sh/jspolicy/pkg/util/certhelper"
 	"github.com/loft-sh/jspolicy/pkg/util/clienthelper"
-	"io/ioutil"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -59,19 +60,26 @@ func prepareValidatingWebhookConfiguration(config *admissionregistrationv1.Valid
 	}
 
 	sideEffects := admissionregistrationv1.SideEffectClassNone
+
+	clientConfig := admissionregistrationv1.WebhookClientConfig{
+		CABundle: caBundleData,
+	}
+	if url := clienthelper.WebhookURL(); url != "" {
+		url = url + validatePath
+		clientConfig.URL = &url
+	} else {
+		clientConfig.Service = &admissionregistrationv1.ServiceReference{
+			Namespace: namespace,
+			Name:      certhelper.WebhookServiceName,
+			Path:      &validatePath,
+		}
+	}
 	config.Webhooks = []admissionregistrationv1.ValidatingWebhook{
 		{
 			Name:          "jspolicy.jspolicy.com",
 			FailurePolicy: &failPolicy,
 			SideEffects:   &sideEffects,
-			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				Service: &admissionregistrationv1.ServiceReference{
-					Namespace: namespace,
-					Name:      certhelper.WebhookServiceName,
-					Path:      &validatePath,
-				},
-				CABundle: caBundleData,
-			},
+			ClientConfig:  clientConfig,
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
