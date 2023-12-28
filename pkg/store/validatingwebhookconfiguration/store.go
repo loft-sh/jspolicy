@@ -2,16 +2,15 @@ package validatingwebhookconfiguration
 
 import (
 	"context"
-	"io/ioutil"
-	"path/filepath"
-
 	policyv1beta1 "github.com/loft-sh/jspolicy/pkg/apis/policy/v1beta1"
 	"github.com/loft-sh/jspolicy/pkg/util/certhelper"
 	"github.com/loft-sh/jspolicy/pkg/util/clienthelper"
+	"io/ioutil"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
