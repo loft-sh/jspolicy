@@ -44,6 +44,8 @@ spec:
       {{- if .Values.jspolicy.extraVolumes }}
       volumes:
         {{- toYaml .Values.jspolicy.extraVolumes | nindent 8 }}
+      {{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "jspolicy.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
       containers:
       - ports:
