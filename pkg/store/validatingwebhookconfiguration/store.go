@@ -59,19 +59,26 @@ func prepareValidatingWebhookConfiguration(config *admissionregistrationv1.Valid
 	}
 
 	sideEffects := admissionregistrationv1.SideEffectClassNone
+
+	clientConfig := admissionregistrationv1.WebhookClientConfig{
+		CABundle: caBundleData,
+	}
+	if url := clienthelper.WebhookURL(); url != "" {
+		url = url + validatePath
+		clientConfig.URL = &url
+	} else {
+		clientConfig.Service = &admissionregistrationv1.ServiceReference{
+			Namespace: namespace,
+			Name:      certhelper.WebhookServiceName,
+			Path:      &validatePath,
+		}
+	}
 	config.Webhooks = []admissionregistrationv1.ValidatingWebhook{
 		{
 			Name:          "jspolicy.jspolicy.com",
 			FailurePolicy: &failPolicy,
 			SideEffects:   &sideEffects,
-			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				Service: &admissionregistrationv1.ServiceReference{
-					Namespace: namespace,
-					Name:      certhelper.WebhookServiceName,
-					Path:      &validatePath,
-				},
-				CABundle: caBundleData,
-			},
+			ClientConfig:  clientConfig,
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},

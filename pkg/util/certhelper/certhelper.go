@@ -115,8 +115,10 @@ func generateCertificate(folder string, service string) error {
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 	}
+	caTemplate := template
+	caTemplate.IsCA = true
 
-	cert, err := x509.CreateCertificate(rand.Reader, template, template, &priv.PublicKey, priv)
+	cert, err := x509.CreateCertificate(rand.Reader, template, caTemplate, &priv.PublicKey, priv)
 	if err != nil {
 		return err
 	}
