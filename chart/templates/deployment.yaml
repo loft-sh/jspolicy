@@ -1,3 +1,4 @@
+{{- if ne (.Values.deployment).create false -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -44,6 +45,7 @@ spec:
       {{- if .Values.jspolicy.extraVolumes }}
       volumes:
         {{- toYaml .Values.jspolicy.extraVolumes | nindent 8 }}
+      {{- end }}
       {{- if .Values.topologySpreadConstraints }}
       topologySpreadConstraints: {{- include "jspolicy.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
@@ -105,3 +107,4 @@ spec:
         volumeMounts:
           {{- toYaml .Values.jspolicy.extraVolumeMounts | nindent 10 }}
         {{- end }}
+{{- end -}}
