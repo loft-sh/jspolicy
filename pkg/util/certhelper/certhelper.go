@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	mathrand "math/rand"
+	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -98,16 +99,26 @@ func generateCertificate(folder string, service string) error {
 	if err != nil {
 		return err
 	}
+	dnsNames := []string{
+		fmt.Sprintf("%s.%s.svc", service, namespace),
+		fmt.Sprintf("%s.%s.svc.cluster.local", service, namespace),
+	}
+	if wurl := clienthelper.WebhookURL(); wurl != "" {
+		u, err := url.ParseRequestURI(wurl)
+		if err != nil {
+			return err
+		}
+		if u.Host != "" {
+			dnsNames = append(dnsNames, u.Host)
+		}
+	}
 
 	template := &x509.Certificate{
 		SerialNumber: big.NewInt(generateSerialNumber()),
 		Subject: pkix.Name{
 			Organization: []string{"jspolicy"},
 		},
-		DNSNames: []string{
-			fmt.Sprintf("%s.%s.svc", service, namespace),
-			fmt.Sprintf("%s.%s.svc.cluster.local", service, namespace),
-		},
+		DNSNames:              dnsNames,
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().AddDate(10, 0, 0),
 		SubjectKeyId:          []byte{1, 2, 3, 4, 6},
