@@ -4,6 +4,10 @@ kind: Service
 metadata:
   name: jspolicy
   namespace: {{ .Release.Namespace }}
+  {{- if .Values.service.annotations }}
+  annotations:
+  {{- .Values.service.annotations | toYaml | nindent 4 }}
+  {{- end }}
   labels:
     app: {{ template "jspolicy.fullname" . }}
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
