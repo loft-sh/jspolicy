@@ -4,7 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v0.9.0] - 2023-03-30
+
+### Fixed
+- Upgrade to V8 11.1.277.13
+
+## [v0.8.0] - 2023-01-19
+
+### Added
+- Added support for Value.release() and FunctionCallbackInfo.release(). This is useful when using v8go in a long-running context.
+
+### Fixed
+- Use string length to ensure null character-containing strings in Go/JS are not terminated early.
+- Object.Set with an empty key string is now supported
+- Upgrade to V8 10.9.194.9
+- Upgrade V8 build OS to Ubuntu 22.04
 
 ## [v0.7.0] - 2021-12-09
 
@@ -30,7 +44,7 @@ to run a pre-compiled script in new contexts.
 - Removed error return value from NewContext which never fails
 - Removed error return value from Context.Isolate() which never fails
 - Removed error return value from NewObjectTemplate and NewFunctionTemplate. Panic if given a nil argument.
-- Function Call accepts receiver as first argument.
+- Function Call accepts receiver as first argument. This **subtle breaking change** will compile old code but interpret the first argument as the receiver. Use `Undefined` to prepend an argument to fix old Call use.
 - Removed Windows support until its build issues are addressed.
 - Upgrade to V8 9.6.180.12
 
