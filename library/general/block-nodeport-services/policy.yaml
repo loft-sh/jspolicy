@@ -1,0 +1,12 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "deny-service-type-nodeport.infy.com"
+spec:
+  operations: ["CREATE", "UPDATE"]
+  resources: ["services"]
+  javascript: |
+    // This policy blocks Service of type NodePort
+    if (request.object.spec.type === "NodePort") {
+      deny(`${request.name} => service type ${request.object.spec.type} is not allowed!`);
+    }

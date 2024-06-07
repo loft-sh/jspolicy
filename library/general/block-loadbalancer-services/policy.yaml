@@ -1,0 +1,12 @@
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: "deny-service-type-loadbalancer.example.com"
+spec:
+  operations: ["CREATE", "UPDATE"]
+  resources: ["services"]
+  javascript: |
+    // This policy blocks Service of type LoadBalancer
+    if (request.object.spec.type === "LoadBalancer") {
+      deny(`${request.name} => service type ${request.object.spec.type} is not allowed!`);
+    }
