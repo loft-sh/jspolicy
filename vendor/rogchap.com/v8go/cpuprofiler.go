@@ -75,16 +75,21 @@ func (c *CPUProfiler) StopProfiling(title string) *CPUProfile {
 
 func newCPUProfileNode(node *C.CPUProfileNode, parent *CPUProfileNode) *CPUProfileNode {
 	n := &CPUProfileNode{
+		nodeId:             int(node.nodeId),
+		scriptId:           int(node.scriptId),
 		scriptResourceName: C.GoString(node.scriptResourceName),
 		functionName:       C.GoString(node.functionName),
 		lineNumber:         int(node.lineNumber),
 		columnNumber:       int(node.columnNumber),
+		hitCount:           int(node.hitCount),
+		bailoutReason:      C.GoString(node.bailoutReason),
 		parent:             parent,
 	}
 
 	if node.childrenCount > 0 {
-		for _, child := range (*[1 << 28]*C.CPUProfileNode)(unsafe.Pointer(node.children))[:node.childrenCount:node.childrenCount] {
-			n.children = append(n.children, newCPUProfileNode(child, n))
+		n.children = make([]*CPUProfileNode, node.childrenCount)
+		for i, child := range (*[1 << 28]*C.CPUProfileNode)(unsafe.Pointer(node.children))[:node.childrenCount:node.childrenCount] {
+			n.children[i] = newCPUProfileNode(child, n)
 		}
 	}
 

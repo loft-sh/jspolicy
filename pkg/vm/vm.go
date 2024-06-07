@@ -6,10 +6,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	cache2 "github.com/loft-sh/jspolicy/pkg/cache"
-	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
+	cache2 "github.com/loft-sh/jspolicy/pkg/cache"
+	"github.com/pkg/errors"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,12 +22,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
-	"net/http"
-	"os"
 	"rogchap.com/v8go"
 	clientpkg "sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
-	"time"
 )
 
 type LogFunc func(str string)
