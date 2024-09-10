@@ -107,4 +107,5 @@ spec:
         volumeMounts:
           {{- toYaml .Values.jspolicy.extraVolumeMounts | nindent 10 }}
         {{- end }}
+      hostNetwork: {{ $.Values.hostNetwork }}
 {{- end -}}
