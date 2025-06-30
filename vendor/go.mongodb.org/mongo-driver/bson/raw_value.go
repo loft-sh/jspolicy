@@ -26,16 +26,21 @@ var ErrNilContext = errors.New("DecodeContext cannot be nil")
 // ErrNilRegistry is returned when the provided registry is nil.
 var ErrNilRegistry = errors.New("Registry cannot be nil")
 
-// RawValue represents a BSON value in byte form. It can be used to hold unprocessed BSON or to
-// defer processing of BSON. Type is the BSON type of the value and Value are the raw bytes that
-// represent the element.
+// RawValue is a raw encoded BSON value. It can be used to delay BSON value decoding or precompute
+// BSON encoded value. Type is the BSON type of the value and Value is the raw encoded BSON value.
 //
-// This type wraps bsoncore.Value for most of it's functionality.
+// A RawValue must be an individual BSON value. Use the Raw type for full BSON documents.
 type RawValue struct {
 	Type  bsontype.Type
 	Value []byte
 
 	r *bsoncodec.Registry
+}
+
+// IsZero reports whether the RawValue is zero, i.e. no data is present on
+// the RawValue. It returns true if Type is 0 and Value is empty or nil.
+func (rv RawValue) IsZero() bool {
+	return rv.Type == 0x00 && len(rv.Value) == 0
 }
 
 // Unmarshal deserializes BSON into the provided val. If RawValue cannot be unmarshaled into val, an
@@ -83,8 +88,12 @@ func (rv RawValue) UnmarshalWithRegistry(r *bsoncodec.Registry, val interface{})
 	return dec.DecodeValue(bsoncodec.DecodeContext{Registry: r}, vr, rval)
 }
 
-// UnmarshalWithContext performs the same unmarshalling as Unmarshal but uses the provided DecodeContext
-// instead of the one attached or the default registry.
+// UnmarshalWithContext performs the same unmarshalling as Unmarshal but uses
+// the provided DecodeContext instead of the one attached or the default
+// registry.
+//
+// Deprecated: Use [RawValue.UnmarshalWithRegistry] with a custom registry to customize
+// unmarshal behavior instead.
 func (rv RawValue) UnmarshalWithContext(dc *bsoncodec.DecodeContext, val interface{}) error {
 	if dc == nil {
 		return ErrNilContext
@@ -266,6 +275,20 @@ func (rv RawValue) Int32() int32 { return convertToCoreValue(rv).Int32() }
 // panicking.
 func (rv RawValue) Int32OK() (int32, bool) { return convertToCoreValue(rv).Int32OK() }
 
+// AsInt32 returns a BSON number as an int32. If the BSON type is not a numeric one, this method
+// will panic.
+//
+// Deprecated: Use AsInt64 instead. If an int32 is required, convert the returned value to an int32
+// and perform any required overflow/underflow checking.
+func (rv RawValue) AsInt32() int32 { return convertToCoreValue(rv).AsInt32() }
+
+// AsInt32OK is the same as AsInt32, except that it returns a boolean instead of
+// panicking.
+//
+// Deprecated: Use AsInt64OK instead. If an int32 is required, convert the returned value to an
+// int32 and perform any required overflow/underflow checking.
+func (rv RawValue) AsInt32OK() (int32, bool) { return convertToCoreValue(rv).AsInt32OK() }
+
 // Timestamp returns the BSON timestamp value the Value represents. It panics if the value is a
 // BSON type other than timestamp.
 func (rv RawValue) Timestamp() (t, i uint32) { return convertToCoreValue(rv).Timestamp() }
@@ -281,6 +304,14 @@ func (rv RawValue) Int64() int64 { return convertToCoreValue(rv).Int64() }
 // Int64OK is the same as Int64, except that it returns a boolean instead of
 // panicking.
 func (rv RawValue) Int64OK() (int64, bool) { return convertToCoreValue(rv).Int64OK() }
+
+// AsInt64 returns a BSON number as an int64. If the BSON type is not a numeric one, this method
+// will panic.
+func (rv RawValue) AsInt64() int64 { return convertToCoreValue(rv).AsInt64() }
+
+// AsInt64OK is the same as AsInt64, except that it returns a boolean instead of
+// panicking.
+func (rv RawValue) AsInt64OK() (int64, bool) { return convertToCoreValue(rv).AsInt64OK() }
 
 // Decimal128 returns the decimal the Value represents. It panics if the value is a BSON type other than
 // decimal.

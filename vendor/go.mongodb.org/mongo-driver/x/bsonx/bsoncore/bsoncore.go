@@ -4,43 +4,29 @@
 // not use this file except in compliance with the License. You may obtain
 // a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
 
-// Package bsoncore contains functions that can be used to encode and decode BSON
-// elements and values to or from a slice of bytes. These functions are aimed at
-// allowing low level manipulation of BSON and can be used to build a higher
-// level BSON library.
-//
-// The Read* functions within this package return the values of the element and
-// a boolean indicating if the values are valid. A boolean was used instead of
-// an error because any error that would be returned would be the same: not
-// enough bytes. This library attempts to do no validation, it will only return
-// false if there are not enough bytes for an item to be read. For example, the
-// ReadDocument function checks the length, if that length is larger than the
-// number of bytes availble, it will return false, if there are enough bytes, it
-// will return those bytes and true. It is the consumers responsibility to
-// validate those bytes.
-//
-// The Append* functions within this package will append the type value to the
-// given dst slice. If the slice has enough capacity, it will not grow the
-// slice. The Append*Element functions within this package operate in the same
-// way, but additionally append the BSON type and the key before the value.
 package bsoncore // import "go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// EmptyDocumentLength is the length of a document that has been started/ended but has no elements.
-const EmptyDocumentLength = 5
-
-// nullTerminator is a string version of the 0 byte that is appended at the end of cstrings.
-const nullTerminator = string(byte(0))
+const (
+	// EmptyDocumentLength is the length of a document that has been started/ended but has no elements.
+	EmptyDocumentLength = 5
+	// nullTerminator is a string version of the 0 byte that is appended at the end of cstrings.
+	nullTerminator       = string(byte(0))
+	invalidKeyPanicMsg   = "BSON element keys cannot contain null bytes"
+	invalidRegexPanicMsg = "BSON regex values cannot contain null bytes"
+)
 
 // AppendType will append t to dst and return the extended buffer.
 func AppendType(dst []byte, t bsontype.Type) []byte { return append(dst, byte(t)) }
@@ -51,17 +37,20 @@ func AppendKey(dst []byte, key string) []byte { return append(dst, key+nullTermi
 // AppendHeader will append Type t and key to dst and return the extended
 // buffer.
 func AppendHeader(dst []byte, t bsontype.Type, key string) []byte {
+	if !isValidCString(key) {
+		panic(invalidKeyPanicMsg)
+	}
+
 	dst = AppendType(dst, t)
 	dst = append(dst, key...)
 	return append(dst, 0x00)
 	// return append(AppendType(dst, t), key+string(0x00)...)
 }
 
-// TODO(skriptble): All of the Read* functions should return src resliced to start just after what
-// was read.
+// TODO(skriptble): All of the Read* functions should return src resliced to start just after what was read.
 
 // ReadType will return the first byte of the provided []byte as a type. If
-// there is no availble byte, false is returned.
+// there is no available byte, false is returned.
 func ReadType(src []byte) (bsontype.Type, []byte, bool) {
 	if len(src) < 1 {
 		return 0, src, false
@@ -189,12 +178,13 @@ func ReadString(src []byte) (string, []byte, bool) {
 
 // AppendDocumentStart reserves a document's length and returns the index where the length begins.
 // This index can later be used to write the length of the document.
-//
-// TODO(skriptble): We really need AppendDocumentStart and AppendDocumentEnd.
-// AppendDocumentStart would handle calling ReserveLength and providing the index of the start of
-// the document. AppendDocumentEnd would handle taking that start index, adding the null byte,
-// calculating the length, and filling in the length at the start of the document.
-func AppendDocumentStart(dst []byte) (index int32, b []byte) { return ReserveLength(dst) }
+func AppendDocumentStart(dst []byte) (index int32, b []byte) {
+	// TODO(skriptble): We really need AppendDocumentStart and AppendDocumentEnd.  AppendDocumentStart would handle calling
+	// TODO ReserveLength and providing the index of the start of the document. AppendDocumentEnd would handle taking that
+	// TODO start index, adding the null byte, calculating the length, and filling in the length at the start of the
+	// TODO document.
+	return ReserveLength(dst)
+}
 
 // AppendDocumentStartInline functions the same as AppendDocumentStart but takes a pointer to the
 // index int32 which allows this function to be used inline.
@@ -223,7 +213,7 @@ func AppendDocumentEnd(dst []byte, index int32) ([]byte, error) {
 // AppendDocument will append doc to dst and return the extended buffer.
 func AppendDocument(dst []byte, doc []byte) []byte { return append(dst, doc...) }
 
-// AppendDocumentElement will append a BSON embeded document element using key
+// AppendDocumentElement will append a BSON embedded document element using key
 // and doc to dst and return the extended buffer.
 func AppendDocumentElement(dst []byte, key string, doc []byte) []byte {
 	return AppendDocument(AppendHeader(dst, bsontype.EmbeddedDocument, key), doc)
@@ -246,7 +236,7 @@ func BuildDocumentValue(elems ...[]byte) Value {
 	return Value{Type: bsontype.EmbeddedDocument, Data: BuildDocument(nil, elems...)}
 }
 
-// BuildDocumentElement will append a BSON embedded document elemnt using key and the provided
+// BuildDocumentElement will append a BSON embedded document element using key and the provided
 // elements and return the extended buffer.
 func BuildDocumentElement(dst []byte, key string, elems ...[]byte) []byte {
 	return BuildDocument(AppendHeader(dst, bsontype.EmbeddedDocument, key), elems...)
@@ -300,7 +290,7 @@ func BuildArrayElement(dst []byte, key string, values ...Value) []byte {
 
 // ReadArray will read an array from src. If there are not enough bytes it
 // will return false.
-func ReadArray(src []byte) (arr Document, rem []byte, ok bool) { return readLengthBytes(src) }
+func ReadArray(src []byte) (arr Array, rem []byte, ok bool) { return readLengthBytes(src) }
 
 // AppendBinary will append subtype and b to dst and return the extended buffer.
 func AppendBinary(dst []byte, subtype byte, b []byte) []byte {
@@ -430,6 +420,10 @@ func AppendNullElement(dst []byte, key string) []byte { return AppendHeader(dst,
 
 // AppendRegex will append pattern and options to dst and return the extended buffer.
 func AppendRegex(dst []byte, pattern, options string) []byte {
+	if !isValidCString(pattern) || !isValidCString(options) {
+		panic(invalidRegexPanicMsg)
+	}
+
 	return append(dst, pattern+nullTerminator+options+nullTerminator...)
 }
 
@@ -713,17 +707,16 @@ func ReserveLength(dst []byte) (int32, []byte) {
 
 // UpdateLength updates the length at index with length and returns the []byte.
 func UpdateLength(dst []byte, index, length int32) []byte {
-	dst[index] = byte(length)
-	dst[index+1] = byte(length >> 8)
-	dst[index+2] = byte(length >> 16)
-	dst[index+3] = byte(length >> 24)
+	binary.LittleEndian.PutUint32(dst[index:], uint32(length))
 	return dst
 }
 
 func appendLength(dst []byte, l int32) []byte { return appendi32(dst, l) }
 
 func appendi32(dst []byte, i32 int32) []byte {
-	return append(dst, byte(i32), byte(i32>>8), byte(i32>>16), byte(i32>>24))
+	b := []byte{0, 0, 0, 0}
+	binary.LittleEndian.PutUint32(b, uint32(i32))
+	return append(dst, b...)
 }
 
 // ReadLength reads an int32 length from src and returns the length and the remaining bytes. If
@@ -741,27 +734,26 @@ func readi32(src []byte) (int32, []byte, bool) {
 	if len(src) < 4 {
 		return 0, src, false
 	}
-	return (int32(src[0]) | int32(src[1])<<8 | int32(src[2])<<16 | int32(src[3])<<24), src[4:], true
+	return int32(binary.LittleEndian.Uint32(src)), src[4:], true
 }
 
 func appendi64(dst []byte, i64 int64) []byte {
-	return append(dst,
-		byte(i64), byte(i64>>8), byte(i64>>16), byte(i64>>24),
-		byte(i64>>32), byte(i64>>40), byte(i64>>48), byte(i64>>56),
-	)
+	b := []byte{0, 0, 0, 0, 0, 0, 0, 0}
+	binary.LittleEndian.PutUint64(b, uint64(i64))
+	return append(dst, b...)
 }
 
 func readi64(src []byte) (int64, []byte, bool) {
 	if len(src) < 8 {
 		return 0, src, false
 	}
-	i64 := (int64(src[0]) | int64(src[1])<<8 | int64(src[2])<<16 | int64(src[3])<<24 |
-		int64(src[4])<<32 | int64(src[5])<<40 | int64(src[6])<<48 | int64(src[7])<<56)
-	return i64, src[8:], true
+	return int64(binary.LittleEndian.Uint64(src)), src[8:], true
 }
 
 func appendu32(dst []byte, u32 uint32) []byte {
-	return append(dst, byte(u32), byte(u32>>8), byte(u32>>16), byte(u32>>24))
+	b := []byte{0, 0, 0, 0}
+	binary.LittleEndian.PutUint32(b, u32)
+	return append(dst, b...)
 }
 
 func readu32(src []byte) (uint32, []byte, bool) {
@@ -769,23 +761,20 @@ func readu32(src []byte) (uint32, []byte, bool) {
 		return 0, src, false
 	}
 
-	return (uint32(src[0]) | uint32(src[1])<<8 | uint32(src[2])<<16 | uint32(src[3])<<24), src[4:], true
+	return binary.LittleEndian.Uint32(src), src[4:], true
 }
 
 func appendu64(dst []byte, u64 uint64) []byte {
-	return append(dst,
-		byte(u64), byte(u64>>8), byte(u64>>16), byte(u64>>24),
-		byte(u64>>32), byte(u64>>40), byte(u64>>48), byte(u64>>56),
-	)
+	b := []byte{0, 0, 0, 0, 0, 0, 0, 0}
+	binary.LittleEndian.PutUint64(b, u64)
+	return append(dst, b...)
 }
 
 func readu64(src []byte) (uint64, []byte, bool) {
 	if len(src) < 8 {
 		return 0, src, false
 	}
-	u64 := (uint64(src[0]) | uint64(src[1])<<8 | uint64(src[2])<<16 | uint64(src[3])<<24 |
-		uint64(src[4])<<32 | uint64(src[5])<<40 | uint64(src[6])<<48 | uint64(src[7])<<56)
-	return u64, src[8:], true
+	return binary.LittleEndian.Uint64(src), src[8:], true
 }
 
 // keep in sync with readcstringbytes
@@ -818,7 +807,7 @@ func readstring(src []byte) (string, []byte, bool) {
 	if !ok {
 		return "", src, false
 	}
-	if len(src[4:]) < int(l) {
+	if len(src[4:]) < int(l) || l == 0 {
 		return "", src, false
 	}
 
@@ -832,6 +821,9 @@ func readLengthBytes(src []byte) ([]byte, []byte, bool) {
 	if !ok {
 		return nil, src, false
 	}
+	if l < 4 {
+		return nil, src, false
+	}
 	if len(src) < int(l) {
 		return nil, src, false
 	}
@@ -843,4 +835,8 @@ func appendBinarySubtype2(dst []byte, subtype byte, b []byte) []byte {
 	dst = append(dst, subtype)
 	dst = appendLength(dst, int32(len(b)))
 	return append(dst, b...)
+}
+
+func isValidCString(cs string) bool {
+	return !strings.ContainsRune(cs, '\x00')
 }
