@@ -57,6 +57,7 @@ func Null(iso *Isolate) *Value {
 //   string -> V8::String
 //   int32 -> V8::Integer
 //   uint32 -> V8::Integer
+//   bool -> V8::Boolean
 //   int64 -> V8::BigInt
 //   uint64 -> V8::BigInt
 //   bool -> V8::Boolean
@@ -72,7 +73,7 @@ func NewValue(iso *Isolate, val interface{}) (*Value, error) {
 	case string:
 		cstr := C.CString(v)
 		defer C.free(unsafe.Pointer(cstr))
-		rtn := C.NewValueString(iso.ptr, cstr, C.int(len(v)))
+		rtn := C.NewValueString(iso.ptr, cstr)
 		return valueResult(nil, rtn)
 	case int32:
 		rtnVal = &Value{
@@ -198,12 +199,13 @@ func (v *Value) Boolean() bool {
 // DetailString provide a string representation of this value usable for debugging.
 func (v *Value) DetailString() string {
 	rtn := C.ValueToDetailString(v.ptr)
-	if rtn.data == nil {
+	if rtn.string == nil {
 		err := newJSError(rtn.error)
 		panic(err) // TODO: Return a fallback value
 	}
-	defer C.free(unsafe.Pointer(rtn.data))
-	return C.GoStringN(rtn.data, rtn.length)
+	s := rtn.string
+	defer C.free(unsafe.Pointer(s))
+	return C.GoString(s)
 }
 
 // Int32 perform the equivalent of `Number(value)` in JS and convert the result to a
@@ -240,8 +242,8 @@ func (v *Value) Object() *Object {
 // print their definition.
 func (v *Value) String() string {
 	s := C.ValueToString(v.ptr)
-	defer C.free(unsafe.Pointer(s.data))
-	return C.GoStringN(s.data, C.int(s.length))
+	defer C.free(unsafe.Pointer(s))
+	return C.GoString(s)
 }
 
 // Uint32 perform the equivalent of `Number(value)` in JS and convert the result to an
@@ -529,11 +531,6 @@ func (v *Value) IsSharedArrayBuffer() bool {
 // IsProxy returns true if this value is a JavaScript `Proxy`.
 func (v *Value) IsProxy() bool {
 	return C.ValueIsProxy(v.ptr) != 0
-}
-
-// Release this value.  Using the value after calling this function will result in undefined behavior.
-func (v *Value) Release() {
-	C.ValueRelease(v.ptr)
 }
 
 // IsWasmModuleObject returns true if this value is a `WasmModuleObject`.

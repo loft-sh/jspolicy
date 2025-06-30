@@ -7,7 +7,6 @@
 
 #include <memory>
 
-#include "cppgc/source-location.h"
 #include "v8-platform.h"  // NOLINT(build/include_directory)
 #include "v8config.h"     // NOLINT(build/include_directory)
 
@@ -33,9 +32,8 @@ class V8_EXPORT Platform {
   virtual ~Platform() = default;
 
   /**
-   * \returns the allocator used by cppgc to allocate its heap and various
-   * support structures. Returning nullptr results in using the `PageAllocator`
-   * provided by `cppgc::InitializeProcess()` instead.
+   * Returns the allocator used by cppgc to allocate its heap and various
+   * support structures.
    */
   virtual PageAllocator* GetPageAllocator() = 0;
 
@@ -133,11 +131,10 @@ class V8_EXPORT Platform {
  *
  * Can be called multiple times when paired with `ShutdownProcess()`.
  *
- * \param page_allocator The allocator used for maintaining meta data. Must stay
- *   always alive and not change between multiple calls to InitializeProcess. If
- *   no allocator is provided, a default internal version will be used.
+ * \param page_allocator The allocator used for maintaining meta data. Must not
+ *   change between multiple calls to InitializeProcess.
  */
-V8_EXPORT void InitializeProcess(PageAllocator* page_allocator = nullptr);
+V8_EXPORT void InitializeProcess(PageAllocator* page_allocator);
 
 /**
  * Must be called after destroying the last used heap. Some process-global
@@ -148,8 +145,7 @@ V8_EXPORT void ShutdownProcess();
 
 namespace internal {
 
-V8_EXPORT void Fatal(const std::string& reason = std::string(),
-                     const SourceLocation& = SourceLocation::Current());
+V8_EXPORT void Abort();
 
 }  // namespace internal
 

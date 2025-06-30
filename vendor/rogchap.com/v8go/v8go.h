@@ -84,14 +84,10 @@ typedef struct {
 
 typedef struct CPUProfileNode {
   CpuProfileNodePtr ptr;
-  unsigned nodeId;
-  int scriptId;
   const char* scriptResourceName;
   const char* functionName;
   int lineNumber;
   int columnNumber;
-  unsigned hitCount;
-  const char* bailoutReason;
   int childrenCount;
   struct CPUProfileNode** children;
 } CPUProfileNode;
@@ -110,8 +106,7 @@ typedef struct {
 } RtnValue;
 
 typedef struct {
-  const char* data;
-  int length;
+  const char* string;
   RtnError error;
 } RtnString;
 
@@ -166,7 +161,6 @@ extern void CPUProfileDelete(CPUProfile* ptr);
 extern ContextPtr NewContext(IsolatePtr iso_ptr,
                              TemplatePtr global_template_ptr,
                              int ref);
-extern int ContextRetainedValueCount(ContextPtr ctx);
 extern void ContextFree(ContextPtr ptr);
 extern RtnValue RunScript(ContextPtr ctx_ptr,
                           const char* source,
@@ -199,7 +193,7 @@ extern ValuePtr NewValueNull(IsolatePtr iso_ptr);
 extern ValuePtr NewValueUndefined(IsolatePtr iso_ptr);
 extern ValuePtr NewValueInteger(IsolatePtr iso_ptr, int32_t v);
 extern ValuePtr NewValueIntegerFromUnsigned(IsolatePtr iso_ptr, uint32_t v);
-extern RtnValue NewValueString(IsolatePtr iso_ptr, const char* v, int v_length);
+extern RtnValue NewValueString(IsolatePtr iso_ptr, const char* v);
 extern ValuePtr NewValueBoolean(IsolatePtr iso_ptr, int v);
 extern ValuePtr NewValueNumber(IsolatePtr iso_ptr, double v);
 extern ValuePtr NewValueBigInt(IsolatePtr iso_ptr, int64_t v);
@@ -208,8 +202,7 @@ extern RtnValue NewValueBigIntFromWords(IsolatePtr iso_ptr,
                                         int sign_bit,
                                         int word_count,
                                         const uint64_t* words);
-void ValueRelease(ValuePtr ptr);
-extern RtnString ValueToString(ValuePtr ptr);
+const char* ValueToString(ValuePtr ptr);
 const uint32_t* ValueToArrayIndex(ValuePtr ptr);
 int ValueToBoolean(ValuePtr ptr);
 int32_t ValueToInt32(ValuePtr ptr);
