@@ -37,15 +37,15 @@ class V8_EXPORT NameProvider {
   static constexpr const char kNoNameDeducible[] = "<No name>";
 
   /**
-   * Indicating whether the build supports extracting C++ names as object names.
+   * Indicating whether internal names are hidden or not.
    *
    * @returns true if C++ names should be hidden and represented by kHiddenName.
    */
-  static constexpr bool SupportsCppClassNamesAsObjectNames() {
+  static constexpr bool HideInternalNames() {
 #if CPPGC_SUPPORTS_OBJECT_NAMES
-    return true;
-#else   // !CPPGC_SUPPORTS_OBJECT_NAMES
     return false;
+#else   // !CPPGC_SUPPORTS_OBJECT_NAMES
+    return true;
 #endif  // !CPPGC_SUPPORTS_OBJECT_NAMES
   }
 

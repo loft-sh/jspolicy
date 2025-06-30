@@ -18,7 +18,6 @@
 namespace v8 {
 
 class Context;
-class UnboundScript;
 
 /**
  * A JavaScript function object (ECMA-262, 15.3).
@@ -58,8 +57,6 @@ class V8_EXPORT Function : public Object {
 
   void SetName(Local<String> name);
   Local<Value> GetName() const;
-
-  MaybeLocal<UnboundScript> GetUnboundScript() const;
 
   /**
    * Name inferred from variable or property assignment of this function.
@@ -105,14 +102,6 @@ class V8_EXPORT Function : public Object {
    */
   V8_WARN_UNUSED_RESULT MaybeLocal<String> FunctionProtoToString(
       Local<Context> context);
-
-  /**
-   * Returns true if the function does nothing.
-   * The function returns false on error.
-   * Note that this function is experimental. Embedders should not rely on
-   * this existing. We may remove this function in the future.
-   */
-  V8_WARN_UNUSED_RESULT bool Experimental_IsNopFunction() const;
 
   ScriptOrigin GetScriptOrigin() const;
   V8_INLINE static Function* Cast(Value* value) {

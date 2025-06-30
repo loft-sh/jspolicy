@@ -59,8 +59,6 @@ func (v Value) IsNumber() bool {
 
 // AsInt32 returns a BSON number as an int32. If the BSON type is not a numeric one, this method
 // will panic.
-//
-// TODO(skriptble): Add support for Decimal128.
 func (v Value) AsInt32() int32 {
 	if !v.IsNumber() {
 		panic(ElementTypeError{"bsoncore.Value.AsInt32", v.Type})
@@ -93,8 +91,6 @@ func (v Value) AsInt32() int32 {
 
 // AsInt32OK functions the same as AsInt32 but returns a boolean instead of panicking. False
 // indicates an error.
-//
-// TODO(skriptble): Add support for Decimal128.
 func (v Value) AsInt32OK() (int32, bool) {
 	if !v.IsNumber() {
 		return 0, false
@@ -127,8 +123,6 @@ func (v Value) AsInt32OK() (int32, bool) {
 
 // AsInt64 returns a BSON number as an int64. If the BSON type is not a numeric one, this method
 // will panic.
-//
-// TODO(skriptble): Add support for Decimal128.
 func (v Value) AsInt64() int64 {
 	if !v.IsNumber() {
 		panic(ElementTypeError{"bsoncore.Value.AsInt64", v.Type})
@@ -162,8 +156,6 @@ func (v Value) AsInt64() int64 {
 
 // AsInt64OK functions the same as AsInt64 but returns a boolean instead of panicking. False
 // indicates an error.
-//
-// TODO(skriptble): Add support for Decimal128.
 func (v Value) AsInt64OK() (int64, bool) {
 	if !v.IsNumber() {
 		return 0, false
@@ -198,21 +190,14 @@ func (v Value) AsInt64OK() (int64, bool) {
 // AsFloat64 returns a BSON number as an float64. If the BSON type is not a numeric one, this method
 // will panic.
 //
-// TODO(skriptble): Add support for Decimal128.
-func (v Value) AsFloat64() float64 { return 0 }
+// TODO(GODRIVER-2751): Implement AsFloat64.
+// func (v Value) AsFloat64() float64
 
 // AsFloat64OK functions the same as AsFloat64 but returns a boolean instead of panicking. False
 // indicates an error.
 //
-// TODO(skriptble): Add support for Decimal128.
-func (v Value) AsFloat64OK() (float64, bool) { return 0, false }
-
-// Add will add this value to another. This is currently only implemented for strings and numbers.
-// If either value is a string, the other type is coerced into a string and added to the other.
-//
-// This method will alter v and will attempt to reuse the []byte of v. If the []byte is too small,
-// it will be expanded.
-func (v *Value) Add(v2 Value) error { return nil }
+// TODO(GODRIVER-2751): Implement AsFloat64OK.
+// func (v Value) AsFloat64OK() (float64, bool)
 
 // Equal compaes v to v2 and returns true if they are equal.
 func (v Value) Equal(v2 Value) bool {
@@ -250,7 +235,7 @@ func (v Value) String() string {
 		if !ok {
 			return ""
 		}
-		return docAsArray(arr, false)
+		return arr.String()
 	case bsontype.Binary:
 		subtype, data, ok := v.BinaryOK()
 		if !ok {
@@ -323,7 +308,7 @@ func (v Value) String() string {
 		if !ok {
 			return ""
 		}
-		return fmt.Sprintf(`{"$timestamp":{"t":"%s","i":"%s"}}`, strconv.FormatUint(uint64(t), 10), strconv.FormatUint(uint64(i), 10))
+		return fmt.Sprintf(`{"$timestamp":{"t":%v,"i":%v}}`, t, i)
 	case bsontype.Int64:
 		i64, ok := v.Int64OK()
 		if !ok {
@@ -366,7 +351,7 @@ func (v Value) DebugString() string {
 		if !ok {
 			return "<malformed>"
 		}
-		return docAsArray(arr, true)
+		return arr.DebugString()
 	case bsontype.CodeWithScope:
 		code, scope, ok := v.CodeWithScopeOK()
 		if !ok {
@@ -464,7 +449,7 @@ func (v Value) DocumentOK() (Document, bool) {
 
 // Array returns the BSON array the Value represents as an Array. It panics if the
 // value is a BSON type other than array.
-func (v Value) Array() Document {
+func (v Value) Array() Array {
 	if v.Type != bsontype.Array {
 		panic(ElementTypeError{"bsoncore.Value.Array", v.Type})
 	}
@@ -477,7 +462,7 @@ func (v Value) Array() Document {
 
 // ArrayOK is the same as Array, except it returns a boolean instead
 // of panicking.
-func (v Value) ArrayOK() (Document, bool) {
+func (v Value) ArrayOK() (Array, bool) {
 	if v.Type != bsontype.Array {
 		return nil, false
 	}
@@ -602,7 +587,7 @@ func (v Value) Time() time.Time {
 	if !ok {
 		panic(NewInsufficientBytesError(v.Data, v.Data))
 	}
-	return time.Unix(int64(dt)/1000, int64(dt)%1000*1000000)
+	return time.Unix(dt/1000, dt%1000*1000000)
 }
 
 // TimeOK is the same as Time, except it returns a boolean instead of
@@ -615,7 +600,7 @@ func (v Value) TimeOK() (time.Time, bool) {
 	if !ok {
 		return time.Time{}, false
 	}
-	return time.Unix(int64(dt)/1000, int64(dt)%1000*1000000), true
+	return time.Unix(dt/1000, dt%1000*1000000), true
 }
 
 // Regex returns the BSON regex value the Value represents. It panics if the value is a BSON
@@ -939,13 +924,14 @@ func escapeString(s string) string {
 
 func formatDouble(f float64) string {
 	var s string
-	if math.IsInf(f, 1) {
+	switch {
+	case math.IsInf(f, 1):
 		s = "Infinity"
-	} else if math.IsInf(f, -1) {
+	case math.IsInf(f, -1):
 		s = "-Infinity"
-	} else if math.IsNaN(f) {
+	case math.IsNaN(f):
 		s = "NaN"
-	} else {
+	default:
 		// Print exactly one decimalType place for integers; otherwise, print as many are necessary to
 		// perfectly represent it.
 		s = strconv.FormatFloat(f, 'G', -1, 64)
@@ -968,48 +954,11 @@ func (ss sortableString) Less(i, j int) bool {
 }
 
 func (ss sortableString) Swap(i, j int) {
-	oldI := ss[i]
-	ss[i] = ss[j]
-	ss[j] = oldI
+	ss[i], ss[j] = ss[j], ss[i]
 }
 
 func sortStringAlphebeticAscending(s string) string {
 	ss := sortableString([]rune(s))
 	sort.Sort(ss)
 	return string([]rune(ss))
-}
-
-func docAsArray(d Document, debug bool) string {
-	if len(d) < 5 {
-		return ""
-	}
-	var buf bytes.Buffer
-	buf.WriteByte('[')
-
-	length, rem, _ := ReadLength(d) // We know we have enough bytes to read the length
-
-	length -= 4
-
-	var elem Element
-	var ok bool
-	first := true
-	for length > 1 {
-		if !first {
-			buf.WriteByte(',')
-		}
-		elem, rem, ok = ReadElement(rem)
-		length -= int32(len(elem))
-		if !ok {
-			return ""
-		}
-		if debug {
-			fmt.Fprintf(&buf, "%s ", elem.Value().DebugString())
-		} else {
-			fmt.Fprintf(&buf, "%s", elem.Value())
-		}
-		first = false
-	}
-	buf.WriteByte(']')
-
-	return buf.String()
 }

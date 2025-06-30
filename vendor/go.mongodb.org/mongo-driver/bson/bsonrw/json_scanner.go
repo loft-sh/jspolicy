@@ -13,8 +13,8 @@ import (
 	"io"
 	"math"
 	"strconv"
-	"strings"
 	"unicode"
+	"unicode/utf16"
 )
 
 type jsonTokenType byte
@@ -58,7 +58,7 @@ func (js *jsonScanner) nextToken() (*jsonToken, error) {
 		c, err = js.readNextByte()
 	}
 
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		return &jsonToken{t: jttEOF}, nil
 	} else if err != nil {
 		return nil, err
@@ -82,12 +82,13 @@ func (js *jsonScanner) nextToken() (*jsonToken, error) {
 		return js.scanString()
 	default:
 		// check if it's a number
-		if c == '-' || isDigit(c) {
+		switch {
+		case c == '-' || isDigit(c):
 			return js.scanNumber(c)
-		} else if c == 't' || c == 'f' || c == 'n' {
+		case c == 't' || c == 'f' || c == 'n':
 			// maybe a literal
 			return js.scanLiteral(c)
-		} else {
+		default:
 			return nil, fmt.Errorf("invalid JSON input. Position: %d. Character: %c", js.pos-1, c)
 		}
 	}
@@ -162,6 +163,31 @@ func isValueTerminator(c byte) bool {
 	return c == ',' || c == '}' || c == ']' || isWhiteSpace(c)
 }
 
+// getu4 decodes the 4-byte hex sequence from the beginning of s, returning the hex value as a rune,
+// or it returns -1. Note that the "\u" from the unicode escape sequence should not be present.
+// It is copied and lightly modified from the Go JSON decode function at
+// https://github.com/golang/go/blob/1b0a0316802b8048d69da49dc23c5a5ab08e8ae8/src/encoding/json/decode.go#L1169-L1188
+func getu4(s []byte) rune {
+	if len(s) < 4 {
+		return -1
+	}
+	var r rune
+	for _, c := range s[:4] {
+		switch {
+		case '0' <= c && c <= '9':
+			c -= '0'
+		case 'a' <= c && c <= 'f':
+			c = c - 'a' + 10
+		case 'A' <= c && c <= 'F':
+			c = c - 'A' + 10
+		default:
+			return -1
+		}
+		r = r*16 + rune(c)
+	}
+	return r
+}
+
 // scanString reads from an opening '"' to a closing '"' and handles escaped characters
 func (js *jsonScanner) scanString() (*jsonToken, error) {
 	var b bytes.Buffer
@@ -173,15 +199,24 @@ func (js *jsonScanner) scanString() (*jsonToken, error) {
 	for {
 		c, err = js.readNextByte()
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, errors.New("end of input in JSON string")
 			}
 			return nil, err
 		}
 
+	evalNextChar:
 		switch c {
 		case '\\':
 			c, err = js.readNextByte()
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					return nil, errors.New("end of input in JSON string")
+				}
+				return nil, err
+			}
+
+		evalNextEscapeChar:
 			switch c {
 			case '"', '\\', '/':
 				b.WriteByte(c)
@@ -202,13 +237,68 @@ func (js *jsonScanner) scanString() (*jsonToken, error) {
 					return nil, fmt.Errorf("invalid unicode sequence in JSON string: %s", us)
 				}
 
-				s := fmt.Sprintf(`\u%s`, us)
-				s, err = strconv.Unquote(strings.Replace(strconv.Quote(s), `\\u`, `\u`, 1))
-				if err != nil {
-					return nil, err
+				rn := getu4(us)
+
+				// If the rune we just decoded is the high or low value of a possible surrogate pair,
+				// try to decode the next sequence as the low value of a surrogate pair. We're
+				// expecting the next sequence to be another Unicode escape sequence (e.g. "\uDD1E"),
+				// but need to handle cases where the input is not a valid surrogate pair.
+				// For more context on unicode surrogate pairs, see:
+				// https://www.christianfscott.com/rust-chars-vs-go-runes/
+				// https://www.unicode.org/glossary/#high_surrogate_code_point
+				if utf16.IsSurrogate(rn) {
+					c, err = js.readNextByte()
+					if err != nil {
+						if errors.Is(err, io.EOF) {
+							return nil, errors.New("end of input in JSON string")
+						}
+						return nil, err
+					}
+
+					// If the next value isn't the beginning of a backslash escape sequence, write
+					// the Unicode replacement character for the surrogate value and goto the
+					// beginning of the next char eval block.
+					if c != '\\' {
+						b.WriteRune(unicode.ReplacementChar)
+						goto evalNextChar
+					}
+
+					c, err = js.readNextByte()
+					if err != nil {
+						if errors.Is(err, io.EOF) {
+							return nil, errors.New("end of input in JSON string")
+						}
+						return nil, err
+					}
+
+					// If the next value isn't the beginning of a unicode escape sequence, write the
+					// Unicode replacement character for the surrogate value and goto the beginning
+					// of the next escape char eval block.
+					if c != 'u' {
+						b.WriteRune(unicode.ReplacementChar)
+						goto evalNextEscapeChar
+					}
+
+					err = js.readNNextBytes(us, 4, 0)
+					if err != nil {
+						return nil, fmt.Errorf("invalid unicode sequence in JSON string: %s", us)
+					}
+
+					rn2 := getu4(us)
+
+					// Try to decode the pair of runes as a utf16 surrogate pair. If that fails, write
+					// the Unicode replacement character for the surrogate value and the 2nd decoded rune.
+					if rnPair := utf16.DecodeRune(rn, rn2); rnPair != unicode.ReplacementChar {
+						b.WriteRune(rnPair)
+					} else {
+						b.WriteRune(unicode.ReplacementChar)
+						b.WriteRune(rn2)
+					}
+
+					break
 				}
 
-				b.WriteString(s)
+				b.WriteRune(rn)
 			default:
 				return nil, fmt.Errorf("invalid escape sequence in JSON string '\\%c'", c)
 			}
@@ -236,17 +326,18 @@ func (js *jsonScanner) scanLiteral(first byte) (*jsonToken, error) {
 
 	c5, err := js.readNextByte()
 
-	if bytes.Equal([]byte("true"), lit) && (isValueTerminator(c5) || err == io.EOF) {
+	switch {
+	case bytes.Equal([]byte("true"), lit) && (isValueTerminator(c5) || errors.Is(err, io.EOF)):
 		js.pos = int(math.Max(0, float64(js.pos-1)))
 		return &jsonToken{t: jttBool, v: true, p: p}, nil
-	} else if bytes.Equal([]byte("null"), lit) && (isValueTerminator(c5) || err == io.EOF) {
+	case bytes.Equal([]byte("null"), lit) && (isValueTerminator(c5) || errors.Is(err, io.EOF)):
 		js.pos = int(math.Max(0, float64(js.pos-1)))
 		return &jsonToken{t: jttNull, v: nil, p: p}, nil
-	} else if bytes.Equal([]byte("fals"), lit) {
+	case bytes.Equal([]byte("fals"), lit):
 		if c5 == 'e' {
 			c5, err = js.readNextByte()
 
-			if isValueTerminator(c5) || err == io.EOF {
+			if isValueTerminator(c5) || errors.Is(err, io.EOF) {
 				js.pos = int(math.Max(0, float64(js.pos-1)))
 				return &jsonToken{t: jttBool, v: false, p: p}, nil
 			}
@@ -295,7 +386,7 @@ func (js *jsonScanner) scanNumber(first byte) (*jsonToken, error) {
 	for {
 		c, err = js.readNextByte()
 
-		if err != nil && err != io.EOF {
+		if err != nil && !errors.Is(err, io.EOF) {
 			return nil, err
 		}
 
@@ -324,7 +415,7 @@ func (js *jsonScanner) scanNumber(first byte) (*jsonToken, error) {
 			case '}', ']', ',':
 				s = nssDone
 			default:
-				if isWhiteSpace(c) || err == io.EOF {
+				if isWhiteSpace(c) || errors.Is(err, io.EOF) {
 					s = nssDone
 				} else {
 					s = nssInvalid
@@ -341,12 +432,13 @@ func (js *jsonScanner) scanNumber(first byte) (*jsonToken, error) {
 			case '}', ']', ',':
 				s = nssDone
 			default:
-				if isWhiteSpace(c) || err == io.EOF {
+				switch {
+				case isWhiteSpace(c) || errors.Is(err, io.EOF):
 					s = nssDone
-				} else if isDigit(c) {
+				case isDigit(c):
 					s = nssSawIntegerDigits
 					b.WriteByte(c)
-				} else {
+				default:
 					s = nssInvalid
 				}
 			}
@@ -366,12 +458,13 @@ func (js *jsonScanner) scanNumber(first byte) (*jsonToken, error) {
 			case '}', ']', ',':
 				s = nssDone
 			default:
-				if isWhiteSpace(c) || err == io.EOF {
+				switch {
+				case isWhiteSpace(c) || errors.Is(err, io.EOF):
 					s = nssDone
-				} else if isDigit(c) {
+				case isDigit(c):
 					s = nssSawFractionDigits
 					b.WriteByte(c)
-				} else {
+				default:
 					s = nssInvalid
 				}
 			}
@@ -401,12 +494,13 @@ func (js *jsonScanner) scanNumber(first byte) (*jsonToken, error) {
 			case '}', ']', ',':
 				s = nssDone
 			default:
-				if isWhiteSpace(c) || err == io.EOF {
+				switch {
+				case isWhiteSpace(c) || errors.Is(err, io.EOF):
 					s = nssDone
-				} else if isDigit(c) {
+				case isDigit(c):
 					s = nssSawExponentDigits
 					b.WriteByte(c)
-				} else {
+				default:
 					s = nssInvalid
 				}
 			}

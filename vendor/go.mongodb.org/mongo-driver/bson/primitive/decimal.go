@@ -10,6 +10,7 @@
 package primitive
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -69,7 +70,6 @@ func (d Decimal128) String() string {
 		// Bits: 1*sign 2*ignored 14*exponent 111*significand.
 		// Implicit 0b100 prefix in significand.
 		exp = int(d.h >> 47 & (1<<14 - 1))
-		//high = 4<<47 | d.h&(1<<47-1)
 		// Spec says all of these values are out of range.
 		high, low = 0, 0
 	} else {
@@ -132,11 +132,9 @@ Loop:
 }
 
 // BigInt returns significand as big.Int and exponent, bi * 10 ^ exp.
-func (d Decimal128) BigInt() (bi *big.Int, exp int, err error) {
+func (d Decimal128) BigInt() (*big.Int, int, error) {
 	high, low := d.GetBytes()
-	var posSign bool // positive sign
-
-	posSign = high>>63&1 == 0
+	posSign := high>>63&1 == 0 // positive sign
 
 	switch high >> 58 & (1<<5 - 1) {
 	case 0x1F:
@@ -148,29 +146,26 @@ func (d Decimal128) BigInt() (bi *big.Int, exp int, err error) {
 		return nil, 0, ErrParseNegInf
 	}
 
+	var exp int
 	if high>>61&3 == 3 {
 		// Bits: 1*sign 2*ignored 14*exponent 111*significand.
 		// Implicit 0b100 prefix in significand.
 		exp = int(high >> 47 & (1<<14 - 1))
-		//high = 4<<47 | d.h&(1<<47-1)
 		// Spec says all of these values are out of range.
 		high, low = 0, 0
 	} else {
 		// Bits: 1*sign 14*exponent 113*significand
 		exp = int(high >> 49 & (1<<14 - 1))
-		high = high & (1<<49 - 1)
+		high &= (1<<49 - 1)
 	}
 	exp += MinDecimal128Exp
 
 	// Would be handled by the logic below, but that's trivial and common.
 	if high == 0 && low == 0 && exp == 0 {
-		if posSign {
-			return new(big.Int), 0, nil
-		}
 		return new(big.Int), 0, nil
 	}
 
-	bi = big.NewInt(0)
+	bi := big.NewInt(0)
 	const host32bit = ^uint(0)>>32 == 0
 	if host32bit {
 		bi.SetBits([]big.Word{big.Word(low), big.Word(low >> 32), big.Word(high), big.Word(high >> 32)})
@@ -181,7 +176,7 @@ func (d Decimal128) BigInt() (bi *big.Int, exp int, err error) {
 	if !posSign {
 		return bi.Neg(bi), exp, nil
 	}
-	return
+	return bi, exp, nil
 }
 
 // IsNaN returns whether d is NaN.
@@ -191,10 +186,9 @@ func (d Decimal128) IsNaN() bool {
 
 // IsInf returns:
 //
-//   +1 d == Infinity
-//    0 other case
-//   -1 d == -Infinity
-//
+//	+1 d == Infinity
+//	 0 other case
+//	-1 d == -Infinity
 func (d Decimal128) IsInf() int {
 	if d.h>>58&(1<<5-1) != 0x1E {
 		return 0
@@ -209,6 +203,49 @@ func (d Decimal128) IsInf() int {
 // IsZero returns true if d is the empty Decimal128.
 func (d Decimal128) IsZero() bool {
 	return d.h == 0 && d.l == 0
+}
+
+// MarshalJSON returns Decimal128 as a string.
+func (d Decimal128) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.String())
+}
+
+// UnmarshalJSON creates a primitive.Decimal128 from a JSON string, an extended JSON $numberDecimal value, or the string
+// "null". If b is a JSON string or extended JSON value, d will have the value of that string, and if b is "null", d will
+// be unchanged.
+func (d *Decimal128) UnmarshalJSON(b []byte) error {
+	// Ignore "null" to keep parity with the standard library. Decoding a JSON null into a non-pointer Decimal128 field
+	// will leave the field unchanged. For pointer values, encoding/json will set the pointer to nil and will not
+	// enter the UnmarshalJSON hook.
+	if string(b) == "null" {
+		return nil
+	}
+
+	var res interface{}
+	err := json.Unmarshal(b, &res)
+	if err != nil {
+		return err
+	}
+	str, ok := res.(string)
+
+	// Extended JSON
+	if !ok {
+		m, ok := res.(map[string]interface{})
+		if !ok {
+			return errors.New("not an extended JSON Decimal128: expected document")
+		}
+		d128, ok := m["$numberDecimal"]
+		if !ok {
+			return errors.New("not an extended JSON Decimal128: expected key $numberDecimal")
+		}
+		str, ok = d128.(string)
+		if !ok {
+			return errors.New("not an extended JSON Decimal128: expected decimal to be string")
+		}
+	}
+
+	*d, err = ParseDecimal128(str)
+	return err
 }
 
 func divmod(h, l uint64, div uint32) (qh, ql uint64, rem uint32) {
@@ -286,6 +323,7 @@ func ParseDecimal128(s string) (Decimal128, error) {
 		return dErr(s)
 	}
 
+	// Parse the significand (i.e. the non-exponent part) as a big.Int.
 	bi, ok := new(big.Int).SetString(intPart+decPart, 10)
 	if !ok {
 		return dErr(s)
@@ -312,11 +350,24 @@ var (
 
 // ParseDecimal128FromBigInt attempts to parse the given significand and exponent into a valid Decimal128 value.
 func ParseDecimal128FromBigInt(bi *big.Int, exp int) (Decimal128, bool) {
-	//copy
+	// copy
 	bi = new(big.Int).Set(bi)
 
 	q := new(big.Int)
 	r := new(big.Int)
+
+	// If the significand is zero, the logical value will always be zero, independent of the
+	// exponent. However, the loops for handling out-of-range exponent values below may be extremely
+	// slow for zero values because the significand never changes. Limit the exponent value to the
+	// supported range here to prevent entering the loops below.
+	if bi.Cmp(zero) == 0 {
+		if exp > MaxDecimal128Exp {
+			exp = MaxDecimal128Exp
+		}
+		if exp < MinDecimal128Exp {
+			exp = MinDecimal128Exp
+		}
+	}
 
 	for bigIntCmpAbs(bi, maxS) == 1 {
 		bi, _ = q.QuoRem(bi, ten, r)

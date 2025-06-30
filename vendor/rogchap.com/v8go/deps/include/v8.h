@@ -19,6 +19,7 @@
 #include <stdint.h>
 
 #include <memory>
+#include <vector>
 
 #include "cppgc/common.h"
 #include "v8-array-buffer.h"       // NOLINT(build/include_directory)

@@ -28,11 +28,6 @@ class V8_EXPORT Data {
   bool IsModule() const;
 
   /**
-   * Returns tru if this data is a |v8::FixedArray|
-   */
-  bool IsFixedArray() const;
-
-  /**
    * Returns true if this data is a |v8::Private|.
    */
   bool IsPrivate() const;
@@ -53,7 +48,7 @@ class V8_EXPORT Data {
   bool IsContext() const;
 
  private:
-  Data() = delete;
+  Data();
 };
 
 /**
@@ -63,16 +58,6 @@ class V8_EXPORT FixedArray : public Data {
  public:
   int Length() const;
   Local<Data> Get(Local<Context> context, int i) const;
-
-  V8_INLINE static FixedArray* Cast(Data* data) {
-#ifdef V8_ENABLE_CHECKS
-    CheckCast(data);
-#endif
-    return reinterpret_cast<FixedArray*>(data);
-  }
-
- private:
-  static void CheckCast(Data* obj);
 };
 
 }  // namespace v8

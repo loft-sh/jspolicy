@@ -8,20 +8,30 @@ package bson
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/bson/bsonrw"
 )
 
+var tRawValue = reflect.TypeOf(RawValue{})
+var tRaw = reflect.TypeOf(Raw(nil))
+
 var primitiveCodecs PrimitiveCodecs
 
 // PrimitiveCodecs is a namespace for all of the default bsoncodec.Codecs for the primitive types
 // defined in this package.
+//
+// Deprecated: Use bson.NewRegistry to get a registry with all primitive encoders and decoders
+// registered.
 type PrimitiveCodecs struct{}
 
 // RegisterPrimitiveCodecs will register the encode and decode methods attached to PrimitiveCodecs
 // with the provided RegistryBuilder. if rb is nil, a new empty RegistryBuilder will be created.
+//
+// Deprecated: Use bson.NewRegistry to get a registry with all primitive encoders and decoders
+// registered.
 func (pc PrimitiveCodecs) RegisterPrimitiveCodecs(rb *bsoncodec.RegistryBuilder) {
 	if rb == nil {
 		panic(errors.New("argument to RegisterPrimitiveCodecs must not be nil"))
@@ -35,18 +45,35 @@ func (pc PrimitiveCodecs) RegisterPrimitiveCodecs(rb *bsoncodec.RegistryBuilder)
 }
 
 // RawValueEncodeValue is the ValueEncoderFunc for RawValue.
-func (PrimitiveCodecs) RawValueEncodeValue(ec bsoncodec.EncodeContext, vw bsonrw.ValueWriter, val reflect.Value) error {
+//
+// If the RawValue's Type is "invalid" and the RawValue's Value is not empty or
+// nil, then this method will return an error.
+//
+// Deprecated: Use bson.NewRegistry to get a registry with all primitive
+// encoders and decoders registered.
+func (PrimitiveCodecs) RawValueEncodeValue(_ bsoncodec.EncodeContext, vw bsonrw.ValueWriter, val reflect.Value) error {
 	if !val.IsValid() || val.Type() != tRawValue {
-		return bsoncodec.ValueEncoderError{Name: "RawValueEncodeValue", Types: []reflect.Type{tRawValue}, Received: val}
+		return bsoncodec.ValueEncoderError{
+			Name:     "RawValueEncodeValue",
+			Types:    []reflect.Type{tRawValue},
+			Received: val,
+		}
 	}
 
 	rawvalue := val.Interface().(RawValue)
+
+	if !rawvalue.Type.IsValid() {
+		return fmt.Errorf("the RawValue Type specifies an invalid BSON type: %#x", byte(rawvalue.Type))
+	}
 
 	return bsonrw.Copier{}.CopyValueFromBytes(vw, rawvalue.Type, rawvalue.Value)
 }
 
 // RawValueDecodeValue is the ValueDecoderFunc for RawValue.
-func (PrimitiveCodecs) RawValueDecodeValue(dc bsoncodec.DecodeContext, vr bsonrw.ValueReader, val reflect.Value) error {
+//
+// Deprecated: Use bson.NewRegistry to get a registry with all primitive encoders and decoders
+// registered.
+func (PrimitiveCodecs) RawValueDecodeValue(_ bsoncodec.DecodeContext, vr bsonrw.ValueReader, val reflect.Value) error {
 	if !val.CanSet() || val.Type() != tRawValue {
 		return bsoncodec.ValueDecoderError{Name: "RawValueDecodeValue", Types: []reflect.Type{tRawValue}, Received: val}
 	}
@@ -61,7 +88,10 @@ func (PrimitiveCodecs) RawValueDecodeValue(dc bsoncodec.DecodeContext, vr bsonrw
 }
 
 // RawEncodeValue is the ValueEncoderFunc for Reader.
-func (PrimitiveCodecs) RawEncodeValue(ec bsoncodec.EncodeContext, vw bsonrw.ValueWriter, val reflect.Value) error {
+//
+// Deprecated: Use bson.NewRegistry to get a registry with all primitive encoders and decoders
+// registered.
+func (PrimitiveCodecs) RawEncodeValue(_ bsoncodec.EncodeContext, vw bsonrw.ValueWriter, val reflect.Value) error {
 	if !val.IsValid() || val.Type() != tRaw {
 		return bsoncodec.ValueEncoderError{Name: "RawEncodeValue", Types: []reflect.Type{tRaw}, Received: val}
 	}
@@ -72,7 +102,10 @@ func (PrimitiveCodecs) RawEncodeValue(ec bsoncodec.EncodeContext, vw bsonrw.Valu
 }
 
 // RawDecodeValue is the ValueDecoderFunc for Reader.
-func (PrimitiveCodecs) RawDecodeValue(dc bsoncodec.DecodeContext, vr bsonrw.ValueReader, val reflect.Value) error {
+//
+// Deprecated: Use bson.NewRegistry to get a registry with all primitive encoders and decoders
+// registered.
+func (PrimitiveCodecs) RawDecodeValue(_ bsoncodec.DecodeContext, vr bsonrw.ValueReader, val reflect.Value) error {
 	if !val.CanSet() || val.Type() != tRaw {
 		return bsoncodec.ValueDecoderError{Name: "RawDecodeValue", Types: []reflect.Type{tRaw}, Received: val}
 	}
@@ -86,26 +119,4 @@ func (PrimitiveCodecs) RawDecodeValue(dc bsoncodec.DecodeContext, vr bsonrw.Valu
 	rdr, err := bsonrw.Copier{}.AppendDocumentBytes(val.Interface().(Raw), vr)
 	val.Set(reflect.ValueOf(rdr))
 	return err
-}
-
-func (pc PrimitiveCodecs) encodeRaw(ec bsoncodec.EncodeContext, dw bsonrw.DocumentWriter, raw Raw) error {
-	var copier bsonrw.Copier
-	elems, err := raw.Elements()
-	if err != nil {
-		return err
-	}
-	for _, elem := range elems {
-		dvw, err := dw.WriteDocumentElement(elem.Key())
-		if err != nil {
-			return err
-		}
-
-		val := elem.Value()
-		err = copier.CopyValueFromBytes(dvw, val.Type, val.Value)
-		if err != nil {
-			return err
-		}
-	}
-
-	return dw.WriteDocumentEnd()
 }

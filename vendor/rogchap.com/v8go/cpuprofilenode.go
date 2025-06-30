@@ -5,12 +5,6 @@
 package v8go
 
 type CPUProfileNode struct {
-	// The id of the current node, unique within the tree.
-	nodeId int
-
-	// The id of the script where the function originates.
-	scriptId int
-
 	// The resource name for script from where the function originates.
 	scriptResourceName string
 
@@ -23,27 +17,11 @@ type CPUProfileNode struct {
 	// The number of the column where the function originates.
 	columnNumber int
 
-	// The count of samples where the function was currently executing.
-	hitCount int
-
-	// The bailout reason for the function if the optimization was disabled for it.
-	bailoutReason string
-
 	// The children node of this node.
 	children []*CPUProfileNode
 
 	// The parent node of this node.
 	parent *CPUProfileNode
-}
-
-// Returns node id.
-func (c *CPUProfileNode) GetNodeId() int {
-	return c.nodeId
-}
-
-// Returns id for script from where the function originates.
-func (c *CPUProfileNode) GetScriptId() int {
-	return c.scriptId
 }
 
 // Returns function name (empty string for anonymous functions.)
@@ -64,16 +42,6 @@ func (c *CPUProfileNode) GetLineNumber() int {
 // Returns number of the column where the function originates.
 func (c *CPUProfileNode) GetColumnNumber() int {
 	return c.columnNumber
-}
-
-// Returns count of samples where the function was currently executing.
-func (c *CPUProfileNode) GetHitCount() int {
-	return c.hitCount
-}
-
-// Returns the bailout reason for the function if the optimization was disabled for it.
-func (c *CPUProfileNode) GetBailoutReason() string {
-	return c.bailoutReason
 }
 
 // Retrieves the ancestor node, or nil if the root.
